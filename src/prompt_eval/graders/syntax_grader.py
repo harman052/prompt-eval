@@ -29,7 +29,7 @@ def validate_regex(text: str) -> float:
     return 0.0
 
 
-def grade_syntax(test_case: TestCase, response: str) -> float:
+def code_grader(test_case: TestCase, response: str) -> float:
   validators = {
     "python": validate_python,
     "json": validate_json,
