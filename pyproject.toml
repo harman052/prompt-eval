@@ -1,7 +1,7 @@
 [project]
 name = "prompt-eval"
 version = "0.1.0"
-description = "Add your description here"
+description = "A lightweight prompt evaluation pipeline"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -9,3 +9,18 @@ dependencies = [
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
 ]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "ruff>=0.16.4",
+]
+
+[tool.uv]
+package = true
+
+[tool.pyright]
+typeCheckingMode = "standard"
+
+[project.scripts]
+prompt-eval = "prompt_eval.main:main"
