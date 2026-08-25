@@ -1,5 +1,5 @@
+from prompt_eval.graders.deterministic_grader import deterministic_grader
 from prompt_eval.graders.model_grader import ModelGrader
-from prompt_eval.graders.syntax_grader import code_grader
 from prompt_eval.llm import LLMClient
 from prompt_eval.models import EvaluationResult, TestCase
 
@@ -36,7 +36,7 @@ class Evaluator:
             output,
         )
 
-        validity_score = code_grader(
+        validity_score = deterministic_grader(
             test_case,
             output,
         )
