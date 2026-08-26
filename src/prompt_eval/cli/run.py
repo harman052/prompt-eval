@@ -1,12 +1,15 @@
 from enum import Enum
+from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
 
 from prompt_eval.cli.graders import deterministic
+from prompt_eval.dataset import load_test_cases
 
 console = Console()
+err_console = Console(stderr=True)
 
 app = typer.Typer()
 
@@ -19,6 +22,9 @@ class Grader(str, Enum):
 
 @app.command()
 def run(
+    dataset: Annotated[
+        Path, typer.Option(help="Path where the test case dataset is loaded from")
+    ] = Path("data/dataset.json"),
     grader: Annotated[
         Grader,
         typer.Option(
@@ -26,9 +32,15 @@ def run(
         ),
     ] = Grader.both,
 ):
-    if grader == Grader.deterministic:
-        deterministic()
-    elif grader == Grader.llm_judge:
-        print("Selected grader is LLM")
+    if dataset.exists() and dataset.is_file():
+        test_cases = load_test_cases(dataset)
+
+        if grader == Grader.deterministic:
+            deterministic(test_cases)
+        elif grader == Grader.llm_judge:
+            print("Selected grader is LLM")
+        else:
+            print("Selected grader is both")
     else:
-        print("Selected grader is both")
+        err_console.print("[red]Test dataset path is invalid[/red]")
+        raise typer.Exit(code=2)
