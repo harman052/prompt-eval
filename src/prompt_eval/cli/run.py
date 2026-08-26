@@ -36,5 +36,13 @@ def run(
         else:
             both(test_cases)
     else:
-        err_console.print("\n[bold red]Test dataset path is invalid[/bold red]\n")
+        err_console.print(
+            "\n[bold]Test dataset is not found or path is invalid[/bold]\n"
+        )
+        err_console.print(
+            "Generate new dataset with [bold]--regenerate[/bold] flag (default test cases: 5).\nUse [bold]--num-cases[/bold] along with [bold]--regenerate[/bold] to generate arbirary number of test cases\n"
+        )
+        err_console.print(
+            "For detailed help, use: [bold]prompt-eval run --help[/bold]\n"
+        )
         raise typer.Exit(code=2)
