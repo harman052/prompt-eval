@@ -4,7 +4,7 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from prompt_eval.cli.graders import both, deterministic, llmJudge
+from prompt_eval.cli.graders import both, deterministic, llm_judge
 from prompt_eval.cli.types import Grader
 from prompt_eval.dataset import load_test_cases
 
@@ -32,7 +32,7 @@ def run(
         if grader == Grader.DETERMINISTIC:
             deterministic(test_cases, grader)
         elif grader == Grader.LLM_JUDGE:
-            llmJudge(test_cases, grader)
+            llm_judge(test_cases, grader)
         else:
             both(test_cases)
     else:

@@ -64,7 +64,7 @@ def deterministic(
     return results
 
 
-def llmJudge(test_cases: list[TestCase], grader: Grader | None = None) -> list[Result]:
+def llm_judge(test_cases: list[TestCase], grader: Grader | None = None) -> list[Result]:
     llm = LLMClient()
     model_grader = ModelGrader(llm)
 
@@ -109,43 +109,41 @@ def both(test_cases: list[TestCase]) -> None:
     console.print("✓ Getting Deterministic Scores")
 
     with console.status("Getting LLM-Judge Scores..."):
-        llmJudge_scores = llmJudge(test_cases)
+        llmJudge_scores = llm_judge(test_cases)
 
     console.print("✓ Getting LLM-Judge Scores")
 
-    with console.status("Combining both..."):
-        for i, test_case in enumerate(test_cases):
-            deterministic_score = deterministic_scores[i].score
-            llm_judge_score = llmJudge_scores[i].score
+    for i, test_case in enumerate(test_cases):
+        deterministic_score = deterministic_scores[i].score
+        llm_judge_score = llmJudge_scores[i].score
 
-            results.append(
-                CombinedResults(
-                    task=test_case.task,
-                    format=test_case.format,
-                    deterministic_score=deterministic_score,
-                    llm_judge_score=llm_judge_score,
-                    final_score=(deterministic_score + llm_judge_score) / 2,
-                )
+        results.append(
+            CombinedResults(
+                task=test_case.task,
+                format=test_case.format,
+                deterministic_score=deterministic_score,
+                llm_judge_score=llm_judge_score,
+                final_score=(deterministic_score + llm_judge_score) / 2,
             )
-
-        table = Table(
-            "Test Case",
-            "Format",
-            "Deterministic",
-            "LLM-Judge",
-            "Final Score",
-            title="Combined scores (Deterministic and LLM as Judge)",
-            width=100,
         )
 
-        for result in results:
-            table.add_row(
-                result.task,
-                result.format,
-                str(result.deterministic_score),
-                str(result.llm_judge_score),
-                str(result.final_score),
-            )
+    table = Table(
+        "Test Case",
+        "Format",
+        "Deterministic",
+        "LLM-Judge",
+        "Final Score",
+        title="Combined scores (Deterministic and LLM as Judge)",
+        width=100,
+    )
 
-        console.print("✓ Combining both")
-        print_table(table)
+    for result in results:
+        table.add_row(
+            result.task,
+            result.format,
+            str(result.deterministic_score),
+            str(result.llm_judge_score),
+            str(result.final_score),
+        )
+
+    print_table(table)
