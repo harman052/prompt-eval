@@ -5,7 +5,7 @@ from prompt_eval.llm import LLMClient
 from prompt_eval.models import Dataset, TestCase
 
 
-def load_dataset(path: Path) -> list[TestCase]:
+def load_test_cases(path: Path) -> list[TestCase]:
     data = json.loads(path.read_text())
     dataset = Dataset.model_validate(data)
     return dataset.test_cases
@@ -29,4 +29,4 @@ def generate_dataset():
 
     with open(path, "w") as f:
         json.dump(dataset.model_dump(), f, indent=2)
-    return load_dataset(path)
+    return load_test_cases(path)
