@@ -1,6 +1,7 @@
 {
   "test_cases": [
     {
+      "id": "001",
       "task": "Parse an AWS CloudFormation template and extract all resource logical IDs that have a DependsOn property",
       "format": "python",
       "solution_criteria": "The solution must correctly identify and return a list of all logical IDs from the CloudFormation JSON template that contain a 'DependsOn' key. The output should be a Python list of strings representing the resource logical IDs. Test with a sample CloudFormation template containing at least 3 resources, where 2 of them have DependsOn properties."

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from prompt_eval.llm import LLMClient
-from prompt_eval.models import Dataset, TestCase
+from prompt_eval.models import Dataset, GeneratedDataset, TestCase
 
 
 def load_test_cases(path: Path) -> list[TestCase]:
@@ -11,9 +11,9 @@ def load_test_cases(path: Path) -> list[TestCase]:
     return dataset.test_cases
 
 
-def generate_dataset():
-    prompt = """
-        Generate exactly 1 AWS-related test case.
+def generate_dataset(test_cases_count: int = 3) -> list[TestCase]:
+    prompt = f"""
+        Generate exactly {test_cases_count} AWS-related test case.
 
         Each test case should:
         - require a Python, JSON, or Regex solution
@@ -25,7 +25,19 @@ def generate_dataset():
     path = Path("data/dataset.json")
     messages = [{"role": "user", "content": prompt}]
 
-    dataset = llm.parse(messages, Dataset)
+    generated_dataset = llm.parse(messages, GeneratedDataset)
+
+    test_cases = [
+        TestCase(
+            id=f"{index:03d}",
+            task=test_case.task,
+            format=test_case.format,
+            solution_criteria=test_case.solution_criteria,
+        )
+        for index, test_case in enumerate(generated_dataset.test_cases, start=1)
+    ]
+
+    dataset = Dataset(test_cases=test_cases)
 
     with open(path, "w") as f:
         json.dump(dataset.model_dump(), f, indent=2)

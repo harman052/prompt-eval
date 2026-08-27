@@ -3,7 +3,18 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+class GeneratedTestCase(BaseModel):
+    task: str
+    format: Literal["python", "json", "regex"]
+    solution_criteria: str
+
+
+class GeneratedDataset(BaseModel):
+    test_cases: list[GeneratedTestCase]
+
+
 class TestCase(BaseModel):
+    id: str
     task: str
     format: Literal["python", "json", "regex"]
     solution_criteria: str
