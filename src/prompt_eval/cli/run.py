@@ -14,6 +14,9 @@ err_console = Console(stderr=True)
 
 app = typer.Typer()
 
+DEFAULT_TEST_CASES = 3
+MIN_TEST_CASES = 1
+
 
 @app.command()
 def run(
@@ -37,10 +40,17 @@ def run(
         int,
         typer.Option(
             "--num-cases",
-            help="Number of test cases to generate. Use it with --regenerate flag. Minimum value: 1",
-            min=1,
+            help=f"Number of test cases to generate. Use it with --regenerate flag. Minimum value: {MIN_TEST_CASES}",
+            min=MIN_TEST_CASES,
         ),
-    ] = 3,
+    ] = DEFAULT_TEST_CASES,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            help="Displays the detailed reasoning behind the LLM-Judge grading",
+        ),
+    ] = False,
 ):
     test_cases: list[TestCase]
     if regenerate:
@@ -60,13 +70,13 @@ def run(
         elif grader == Grader.LLM_JUDGE:
             llm_judge(test_cases, grader)
         else:
-            both(test_cases)
+            both(test_cases, verbose)
     else:
         err_console.print(
             "\n[bold]Test dataset is not found or path is invalid[/bold]\n"
         )
         err_console.print(
-            "Generate new dataset with [bold]--regenerate[/bold] flag (default test cases: 5).\nUse [bold]--num-cases[/bold] along with [bold]--regenerate[/bold] to generate arbirary number of test cases\n"
+            f"Generate new dataset with [bold]--regenerate[/bold] flag (default test cases: {DEFAULT_TEST_CASES}).\nUse [bold]--num-cases[/bold] along with [bold]--regenerate[/bold] to generate arbirary number of test cases\n"
         )
         err_console.print(
             "For detailed help, use: [bold]prompt-eval run --help[/bold]\n"
