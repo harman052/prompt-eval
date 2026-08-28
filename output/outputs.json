@@ -1,0 +1,7 @@
+[
+  {
+    "test_case_id": "001",
+    "task": "Parse an AWS CloudFormation template and extract all resource logical IDs that have a DependsOn property",
+    "solution": "\nimport json\nimport yaml\nimport sys\n\ndef extract_depends_on_resources(template_content):\n    try:\n        template = json.loads(template_content)\n    except json.JSONDecodeError:\n        try:\n            template = yaml.safe_load(template_content)\n        except yaml.YAMLError:\n            return []\n    \n    if not isinstance(template, dict):\n        return []\n    \n    resources = template.get('Resources', {})\n    \n    if not isinstance(resources, dict):\n        return []\n    \n    depends_on_resources = []\n    \n    for logical_id, resource in resources.items():\n        if isinstance(resource, dict) and 'DependsOn' in resource:\n            depends_on_resources.append(logical_id)\n    \n    return depends_on_resources\n\n\nif __name__ == \"__main__\":\n    if len(sys.argv) > 1:\n        template_file = sys.argv[1]\n        with open(template_file, 'r') as f:\n            template_content = f.read()\n    else:\n        template_content = sys.stdin.read()\n    \n    result = extract_depends_on_resources(template_content)\n    print(json.dumps(result, indent=2))\n"
+  }
+]

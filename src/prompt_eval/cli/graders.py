@@ -1,13 +1,11 @@
-import json
 from pathlib import Path
-from typing import TypeVar
 
 from pydantic import BaseModel
 from rich.console import Console
 from rich.table import Table
 
 from prompt_eval.cli.types import Grader
-from prompt_eval.cli.utils import generate_numbered_list, print_table
+from prompt_eval.cli.utils import generate_numbered_list, print_table, save_results
 from prompt_eval.graders.deterministic_grader import deterministic_grader
 from prompt_eval.graders.model_grader import ModelGrader
 from prompt_eval.llm import LLMClient
@@ -18,6 +16,7 @@ console = Console()
 RESULTS_DIR = Path("eval_results")
 DETERMINISTIC_RESULTS_FILE = RESULTS_DIR / "deterministic_grader_results.json"
 MODEL_RESULTS_FILE = RESULTS_DIR / "model_grader_results.json"
+COMBINED_RESULTS_FILE = RESULTS_DIR / "combined_results.json"
 
 TEST_SOLUTION = """
 import json
@@ -86,17 +85,6 @@ class CombinedResults(BaseModel):
     final_score: float
 
 
-def _save_results[ModelT: BaseModel](results: list[ModelT], path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    with path.open("w") as file:
-        json.dump(
-            [result.model_dump() for result in results],
-            file,
-            indent=2,
-        )
-
-
 def _print_deterministic_results(
     results: list[DeterministicGraderResults],
 ) -> None:
@@ -150,7 +138,6 @@ def _build_combined_results(
     test_cases: list[TestCase],
     deterministic_results: list[DeterministicGraderResults],
     model_results: list[ModelGraderResults],
-    verbose: bool,
 ) -> list[CombinedResults]:
     results: list[CombinedResults] = []
 
@@ -160,19 +147,16 @@ def _build_combined_results(
         model_results,
         strict=True,
     ):
-        deterministic_score = deterministic_result.score
-        llm_judge_score = model_result.score
-
         results.append(
             CombinedResults(
                 task=test_case.task,
                 format=test_case.format,
-                strengths=model_result.strengths if verbose else None,
-                weaknesses=model_result.weaknesses if verbose else None,
-                reasoning=model_result.reasoning if verbose else None,
-                deterministic_score=deterministic_score,
-                llm_judge_score=llm_judge_score,
-                final_score=(deterministic_score + llm_judge_score) / 2,
+                strengths=model_result.strengths,
+                weaknesses=model_result.weaknesses,
+                reasoning=model_result.reasoning,
+                deterministic_score=deterministic_result.score,
+                llm_judge_score=model_result.score,
+                final_score=(deterministic_result.score + model_result.score) / 2,
             )
         )
 
@@ -244,7 +228,7 @@ def deterministic(
         for test_case in test_cases
     ]
 
-    _save_results(results, DETERMINISTIC_RESULTS_FILE)
+    save_results(results, DETERMINISTIC_RESULTS_FILE)
 
     if grader == Grader.DETERMINISTIC:
         _print_deterministic_results(results)
@@ -275,7 +259,7 @@ def llm_judge(
             )
         )
 
-    _save_results(results, MODEL_RESULTS_FILE)
+    save_results(results, MODEL_RESULTS_FILE)
 
     if grader == Grader.LLM_JUDGE:
         _print_model_results(results)
@@ -298,7 +282,8 @@ def both(test_cases: list[TestCase], verbose: bool) -> None:
         test_cases,
         deterministic_results,
         model_results,
-        verbose,
     )
+
+    save_results(combined_results, COMBINED_RESULTS_FILE)
 
     _print_combined_results(combined_results, verbose)

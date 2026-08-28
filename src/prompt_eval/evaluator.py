@@ -1,3 +1,4 @@
+from prompt_eval.cli.prompt import get_prompt
 from prompt_eval.graders.deterministic_grader import deterministic_grader
 from prompt_eval.graders.model_grader import ModelGrader
 from prompt_eval.llm import LLMClient
@@ -14,13 +15,7 @@ class Evaluator:
         self.model_grader = model_grader
 
     def run_prompt(self, test_case: TestCase) -> str:
-        prompt = f"""Complete the following task:
-
-    {test_case.task}
-
-    * The entire response must be valid {test_case.format} source.
-    * Do not add any comments or commentary or explanation
-    """
+        prompt = get_prompt(test_case)
 
         messages = [
             {"role": "user", "content": prompt},
