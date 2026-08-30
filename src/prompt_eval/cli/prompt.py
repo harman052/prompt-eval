@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from prompt_eval.cli.constants import DEFAULT_OUTPUTS_PATH
 from prompt_eval.cli.utils import save_results
 from prompt_eval.llm import LLMClient
 from prompt_eval.models import Dataset, TestCase
@@ -42,5 +43,5 @@ def run_prompt(dataset: Dataset) -> list[PromptOutput]:
                 solution=llm.chat(messages, stop_sequences=["```"]),
             )
         )
-    save_results(outputs, Path("output/outputs.json"))
+    save_results(outputs, Path(DEFAULT_OUTPUTS_PATH))
     return outputs
