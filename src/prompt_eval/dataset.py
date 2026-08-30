@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from prompt_eval.cli.constants import DEFAULT_DATASET_PATH
+from prompt_eval.cli.constants import DEFAULT_DATASET_FILE
 from prompt_eval.cli.utils import load_file, save_file
 from prompt_eval.llm import LLMClient
 from prompt_eval.models import Dataset, GeneratedDataset, TestCase
@@ -33,5 +33,5 @@ def generate_dataset(test_cases_count: int = 3) -> Dataset:
             )
         )
 
-    save_file(test_cases, Path(DEFAULT_DATASET_PATH))
-    return load_file(Dataset, DEFAULT_DATASET_PATH)
+    save_file(test_cases, Path(DEFAULT_DATASET_FILE))
+    return load_file(Dataset, DEFAULT_DATASET_FILE)

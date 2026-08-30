@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from prompt_eval.cli.constants import DEFAULT_OUTPUTS_PATH
+from prompt_eval.cli.constants import DEFAULT_OUTPUTS_FILE
 from prompt_eval.cli.utils import save_file
 from prompt_eval.llm import LLMClient
 from prompt_eval.models import Dataset, Solution, Solutions, TestCase
@@ -36,6 +36,6 @@ def run_prompt(dataset: Dataset) -> Solutions:
             )
         )
 
-    save_file(outputs, Path(DEFAULT_OUTPUTS_PATH))
+    save_file(outputs, Path(DEFAULT_OUTPUTS_FILE))
 
     return outputs

@@ -4,7 +4,7 @@ import typer
 from rich.console import Console
 
 from prompt_eval.cli.constants import (
-    DEFAULT_DATASET_PATH,
+    DEFAULT_DATASET_FILE,
     DEFAULT_TEST_CASES,
     MIN_TEST_CASES,
 )
@@ -39,17 +39,19 @@ def init_dataset(
     """
     if (
         regenerate == False
-        and DEFAULT_DATASET_PATH.exists()
-        and DEFAULT_DATASET_PATH.is_file()
+        and DEFAULT_DATASET_FILE.exists()
+        and DEFAULT_DATASET_FILE.is_file()
     ):
         err_console.print(
-            "\n[red]⚠︎ Dataset already exists at data/dataset.json. Use [code]--regenerate[/code] flag to override exisiting dataset.[/red]\n"
+            "\n[red bold]⚠︎ Dataset already exists at data/dataset.json. Use [code]--regenerate[/code] flag to override exisiting dataset.[/red bold]\n"
         )
         raise typer.Exit(code=2)
     else:
-        with console.status(f"Generating new dataset with {num_cases} test cases..."):
+        with console.status(
+            f"Generating new dataset with {num_cases} test {'cases' if num_cases > 1 else 'case'}..."
+        ):
             generate_dataset(num_cases)
 
             console.print(
-                f"\n[green]✓ Dataset generated with {num_cases} test cases at data/dataset.json.[/green]\n"
+                f"\n[green bold]✓ Dataset generated with {num_cases} test cases at data/dataset.json.[/green bold]\n"
             )
