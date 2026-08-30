@@ -37,15 +37,6 @@ def init_dataset(
     """
     Creates a test dataset at data/dataset.json via the LLM
     """
-    # if regenerate:
-    #     with console.status(f"Generating new dataset with {num_cases} test cases..."):
-    #         generate_dataset(num_cases)
-
-    #         console.print(
-    #             f"\n[green]✓ Dataset generated with {num_cases} test cases at data/dataset.json.[/green]\n"
-    #         )
-    #     raise typer.Exit()
-
     if (
         regenerate == False
         and DEFAULT_DATASET_PATH.exists()
