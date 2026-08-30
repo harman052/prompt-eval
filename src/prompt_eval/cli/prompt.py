@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from prompt_eval.cli.utils import save_results
 from prompt_eval.llm import LLMClient
-from prompt_eval.models import TestCase
+from prompt_eval.models import Dataset, TestCase
 
 
 class PromptOutput(BaseModel):
@@ -23,12 +23,12 @@ def get_prompt(test_case: TestCase):
         """
 
 
-def run_prompt(test_cases: list[TestCase]) -> list[PromptOutput]:
+def run_prompt(dataset: Dataset) -> list[PromptOutput]:
     llm = LLMClient()
     messages: list[dict[str, str]] = []
     outputs: list[PromptOutput] = []
 
-    for test_case in test_cases:
+    for test_case in dataset.root:
         prompt = get_prompt(test_case)
 
         messages = [

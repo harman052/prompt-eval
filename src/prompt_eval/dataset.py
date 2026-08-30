@@ -1,17 +1,16 @@
-import json
 from pathlib import Path
 
+from prompt_eval.cli.constants import DEFAULT_DATASET_PATH
+from prompt_eval.cli.utils import save_results
 from prompt_eval.llm import LLMClient
 from prompt_eval.models import Dataset, GeneratedDataset, TestCase
 
 
-def load_test_cases(path: Path) -> list[TestCase]:
-    data = json.loads(path.read_text())
-    dataset = Dataset.model_validate(data)
-    return dataset.test_cases
+def load_dataset(path: Path) -> Dataset:
+    return Dataset.model_validate_json(path.read_text())
 
 
-def generate_dataset(test_cases_count: int = 3) -> list[TestCase]:
+def generate_dataset(test_cases_count: int = 3) -> Dataset:
     prompt = f"""
         Generate exactly {test_cases_count} AWS-related test case.
 
@@ -22,7 +21,6 @@ def generate_dataset(test_cases_count: int = 3) -> list[TestCase]:
   """
 
     llm = LLMClient()
-    path = Path("data/dataset.json")
     messages = [{"role": "user", "content": prompt}]
 
     generated_dataset = llm.parse(messages, GeneratedDataset)
@@ -37,8 +35,5 @@ def generate_dataset(test_cases_count: int = 3) -> list[TestCase]:
         for index, test_case in enumerate(generated_dataset.test_cases, start=1)
     ]
 
-    dataset = Dataset(test_cases=test_cases)
-
-    with open(path, "w") as f:
-        json.dump(dataset.model_dump(), f, indent=2)
-    return load_test_cases(path)
+    save_results(test_cases, DEFAULT_DATASET_PATH)
+    return load_dataset(DEFAULT_DATASET_PATH)

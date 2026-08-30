@@ -9,7 +9,7 @@ from prompt_eval.cli.utils import generate_numbered_list, print_table, save_resu
 from prompt_eval.graders.deterministic_grader import deterministic_grader
 from prompt_eval.graders.model_grader import ModelGrader
 from prompt_eval.llm import LLMClient
-from prompt_eval.models import TestCase
+from prompt_eval.models import Dataset, TestCase
 
 console = Console()
 
@@ -135,14 +135,14 @@ def _print_model_results(results: list[ModelGraderResults]) -> None:
 
 
 def _build_combined_results(
-    test_cases: list[TestCase],
+    dataset: Dataset,
     deterministic_results: list[DeterministicGraderResults],
     model_results: list[ModelGraderResults],
 ) -> list[CombinedResults]:
     results: list[CombinedResults] = []
 
     for test_case, deterministic_result, model_result in zip(
-        test_cases,
+        dataset.root,
         deterministic_results,
         model_results,
         strict=True,
@@ -215,7 +215,7 @@ def _print_combined_results(
 
 
 def deterministic(
-    test_cases: list[TestCase],
+    dataset: Dataset,
     grader: Grader | None = None,
 ) -> list[DeterministicGraderResults]:
     results = [
@@ -225,7 +225,7 @@ def deterministic(
             format=test_case.format,
             score=deterministic_grader(test_case, TEST_SOLUTION),
         )
-        for test_case in test_cases
+        for test_case in dataset.root
     ]
 
     save_results(results, DETERMINISTIC_RESULTS_FILE)
@@ -237,14 +237,14 @@ def deterministic(
 
 
 def llm_judge(
-    test_cases: list[TestCase],
+    dataset: Dataset,
     grader: Grader | None = None,
 ) -> list[ModelGraderResults]:
     model_grader = ModelGrader(LLMClient())
 
     results: list[ModelGraderResults] = []
 
-    for test_case in test_cases:
+    for test_case in dataset.root:
         response = model_grader.grade(test_case, TEST_SOLUTION)
 
         results.append(
@@ -267,19 +267,19 @@ def llm_judge(
     return results
 
 
-def both(test_cases: list[TestCase], verbose: bool) -> None:
+def both(dataset: Dataset, verbose: bool) -> None:
     with console.status("Getting Deterministic Scores..."):
-        deterministic_results = deterministic(test_cases)
+        deterministic_results = deterministic(dataset)
 
     console.print("✓ Getting Deterministic Scores")
 
     with console.status("Getting LLM-Judge Scores..."):
-        model_results = llm_judge(test_cases)
+        model_results = llm_judge(dataset)
 
     console.print("✓ Getting LLM-Judge Scores")
 
     combined_results = _build_combined_results(
-        test_cases,
+        dataset,
         deterministic_results,
         model_results,
     )

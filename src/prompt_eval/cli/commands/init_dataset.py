@@ -37,18 +37,27 @@ def init_dataset(
     """
     Creates a test dataset at data/dataset.json via the LLM
     """
-    if regenerate:
+    # if regenerate:
+    #     with console.status(f"Generating new dataset with {num_cases} test cases..."):
+    #         generate_dataset(num_cases)
+
+    #         console.print(
+    #             f"\n[green]✓ Dataset generated with {num_cases} test cases at data/dataset.json.[/green]\n"
+    #         )
+    #     raise typer.Exit()
+
+    if (
+        regenerate == False
+        and DEFAULT_DATASET_PATH.exists()
+        and DEFAULT_DATASET_PATH.is_file()
+    ):
+        err_console.print(
+            "\n[red]⚠︎ Dataset already exists at data/dataset.json. Use [code]--regenerate[/code] flag to override exisiting dataset.[/red]\n"
+        )
+    else:
         with console.status(f"Generating new dataset with {num_cases} test cases..."):
             generate_dataset(num_cases)
 
             console.print(
                 f"\n[green]✓ Dataset generated with {num_cases} test cases at data/dataset.json.[/green]\n"
             )
-        raise typer.Exit()
-
-    if DEFAULT_DATASET_PATH.exists() and DEFAULT_DATASET_PATH.is_file():
-        err_console.print(
-            "\n[red]⚠︎ Dataset already exists at data/dataset.json. Use [code]--regenerate[/code] flag to override exisiting dataset.[/red]\n"
-        )
-    else:
-        generate_dataset(num_cases)

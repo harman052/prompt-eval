@@ -7,8 +7,8 @@ from rich.console import Console
 from prompt_eval.cli.graders import both, deterministic, llm_judge
 from prompt_eval.cli.prompt import run_prompt
 from prompt_eval.cli.types import Grader
-from prompt_eval.dataset import generate_dataset, load_test_cases
-from prompt_eval.models import TestCase
+from prompt_eval.dataset import load_dataset
+from prompt_eval.models import Dataset, TestCase
 
 console = Console()
 err_console = Console(stderr=True)
@@ -52,15 +52,15 @@ def run(
         ),
     ] = False,
 ):
-    test_cases: list[TestCase]
+    test_cases: Dataset
     if prompt:
         if dataset.exists() and dataset.is_file():
-            test_cases = load_test_cases(dataset)
+            test_cases = load_dataset(dataset)
             run_prompt(test_cases)
         raise typer.Exit()
 
     if dataset.exists() and dataset.is_file():
-        test_cases = load_test_cases(dataset)
+        test_cases = load_dataset(dataset)
 
         if grader == Grader.DETERMINISTIC:
             deterministic(test_cases, grader)
@@ -73,7 +73,10 @@ def run(
             "\n[bold]Test dataset is not found or path is invalid[/bold]\n"
         )
         err_console.print(
-            f"Generate new dataset with [bold]--regenerate[/bold] flag (default test cases: {DEFAULT_TEST_CASES}).\nUse [bold]--num-cases[/bold] along with [bold]--regenerate[/bold] to generate arbirary number of test cases\n"
+            f"Generate new dataset with command: [bold]prompt-eval init-dataset[/bold]. Use flag [bold]--num-cases[/bold] to define the number of test cases to generate (min: {MIN_TEST_CASES},  default: {DEFAULT_TEST_CASES}).\n"
+        )
+        err_console.print(
+            "For example: [bold]prompt-eval init-dataset --num-cases 5[/bold]\n"
         )
         err_console.print(
             "For detailed help, use: [bold]prompt-eval run --help[/bold]\n"

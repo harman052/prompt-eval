@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class GeneratedTestCase(BaseModel):
@@ -20,8 +20,8 @@ class TestCase(BaseModel):
     solution_criteria: str
 
 
-class Dataset(BaseModel):
-    test_cases: list[TestCase]
+class Dataset(RootModel[list[TestCase]]):
+    pass
 
 
 class ModelGrade(BaseModel):
