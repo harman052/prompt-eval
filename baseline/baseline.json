@@ -1,0 +1,27 @@
+[
+  {
+    "task": "Parse an AWS S3 bucket policy JSON document and extract all Principal ARNs that have 's3:GetObject' permission. Return them as a sorted list.",
+    "format": "python",
+    "strengths": [
+      "The solution correctly parses JSON policy documents with proper error handling for malformed JSON",
+      "It properly handles multiple Principal formats: string, dict with 'AWS' key, and list",
+      "It correctly identifies various Action formats (single string, list, wildcards like 's3:*' and '*')",
+      "The use of a set prevents duplicate principals in the output",
+      "The output is properly sorted as required",
+      "It safely handles missing or invalid Statement entries with isinstance checks",
+      "The code reads from stdin and outputs valid JSON as expected"
+    ],
+    "weaknesses": [
+      "The solution explicitly excludes wildcard '*' principal when it's a string, but the criteria states 'including wildcard' should be extracted - this is a critical logic error",
+      "It handles the dict case with '*' key by doing nothing (pass statement), also excluding the wildcard when it should be included",
+      "The Effect field is never checked - the solution assumes all statements are 'Allow' statements, but policies can have 'Deny' statements that should be excluded",
+      "No handling for Principal as a dict with 'Service' key, only checks for 'AWS' key, limiting support for different principal types",
+      "Doesn't validate that the action actually includes GetObject permission - treats 's3:*' the same as 's3:GetObject', which may be overly broad for the task intent",
+      "The list branch for Principal doesn't filter out '*' values, creating inconsistency with string principal handling"
+    ],
+    "reasoning": "The solution demonstrates good defensive programming practices and handles JSON parsing robustly. However, it has two critical flaws: (1) It filters out wildcard '*' principals when the criteria explicitly requires including them, and (2) it doesn't check the Effect field to exclude Deny statements. The inconsistent handling of '*' across different Principal types (excluded when string, excluded via pass when in dict, but potentially included when in list) shows incomplete logic. Additionally, while the solution correctly identifies multiple action patterns, it doesn't verify the Effect field which is essential for S3 bucket policy analysis. These issues prevent the solution from fully meeting the stated criteria.",
+    "deterministic_score": 10.0,
+    "llm_judge_score": 4.0,
+    "final_score": 7.0
+  }
+]
