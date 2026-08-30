@@ -50,3 +50,16 @@ def print_dataset_error(dataset: Path) -> None:
     err_console.print(
         "\nFor detailed help, use: [bold]prompt-eval evaluate --help[/bold]"
     )
+
+
+def calcuate_delta(baseline_score: float, current_score: float) -> float:
+    return current_score - baseline_score
+
+
+def format_delta(score: float):
+    if score > 0:
+        return f"[bold green]+{score}[/bold green]"
+    elif score < 0:
+        return f"[bold red]{score}[/bold red]"
+    else:
+        return "[bold dim]0[/bold dim]"

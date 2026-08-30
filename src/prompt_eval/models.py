@@ -88,3 +88,14 @@ class CombinedResult(BaseModel):
 
 class CombinedResults(RootModel[list[CombinedResult]]):
     pass
+
+
+class ComparisonResult(BaseModel):
+    task: str
+    baseline_score: float
+    current_score: float
+    delta: float
+
+
+class ComparisonResults(RootModel[list[ComparisonResult]]):
+    pass
