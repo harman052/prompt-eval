@@ -4,41 +4,28 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from prompt_eval.cli.constants import (
+    DEFAULT_DATASET_PATH,
+    DEFAULT_OUTPUTS_PATH,
+    DEFAULT_TEST_CASES,
+    MIN_TEST_CASES,
+)
 from prompt_eval.cli.graders import both, deterministic, llm_judge
-from prompt_eval.cli.prompt import run_prompt
 from prompt_eval.cli.types import Grader
-
-# from prompt_eval.dataset import load_dataset
-# from prompt_eval.models import Dataset, TestCase
+from prompt_eval.cli.utils import load_file
+from prompt_eval.models import Dataset, Solutions
 
 console = Console()
 err_console = Console(stderr=True)
 
 app = typer.Typer()
 
-DEFAULT_TEST_CASES = 3
-MIN_TEST_CASES = 1
-
 
 @app.command()
-def run(
-    prompt: Annotated[
-        bool,
-        typer.Option(
-            "--prompt",
-            help="Run a prompt through a LLM to generate solutions against test cases for evaluation",
-        ),
-    ] = False,
-    set_baseline: Annotated[
-        bool,
-        typer.Option(
-            "--set-baseline",
-            help="Explicitly promote the latest grader results as a new baseline to compare against subsequent runs",
-        ),
-    ] = False,
+def evaluate(
     dataset: Annotated[
-        Path, typer.Option(help="Path where the test case dataset is loaded from.")
-    ] = Path("data/dataset.json"),
+        Path, typer.Option(help="Path where the test dataset is loaded from.")
+    ] = Path(DEFAULT_DATASET_PATH),
     grader: Annotated[
         Grader,
         typer.Option(
@@ -53,22 +40,19 @@ def run(
         ),
     ] = False,
 ):
-    test_cases: Dataset
-    if prompt:
-        if dataset.exists() and dataset.is_file():
-            test_cases = load_dataset(dataset)
-            run_prompt(test_cases)
-        raise typer.Exit()
-
+    """
+    Grades existing outputs with different graders
+    """
     if dataset.exists() and dataset.is_file():
-        test_cases = load_dataset(dataset)
+        solutions = load_file(Solutions, DEFAULT_OUTPUTS_PATH)
+        test_cases = load_file(Dataset, DEFAULT_DATASET_PATH)
 
         if grader == Grader.DETERMINISTIC:
-            deterministic(test_cases, grader)
+            deterministic(test_cases, solutions, grader)
         elif grader == Grader.LLM_JUDGE:
-            llm_judge(test_cases, grader)
+            llm_judge(test_cases, solutions, grader)
         else:
-            both(test_cases, verbose)
+            both(test_cases, solutions, verbose)
     else:
         err_console.print(
             "\n[bold]Test dataset is not found or path is invalid[/bold]\n"

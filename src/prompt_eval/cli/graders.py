@@ -1,15 +1,20 @@
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 from rich.console import Console
 from rich.table import Table
 
 from prompt_eval.cli.types import Grader
-from prompt_eval.cli.utils import generate_numbered_list, print_table, save_results
+from prompt_eval.cli.utils import (
+    generate_numbered_list,
+    print_table,
+    save_file,
+    save_results,
+)
 from prompt_eval.graders.deterministic_grader import deterministic_grader
 from prompt_eval.graders.model_grader import ModelGrader
 from prompt_eval.llm import LLMClient
-from prompt_eval.models import Dataset, TestCase
+from prompt_eval.models import Dataset, Solutions
 
 console = Console()
 
@@ -57,14 +62,18 @@ if __name__ == "__main__":
 """
 
 
-class DeterministicGraderResults(BaseModel):
+class DeterministicGraderResult(BaseModel):
     test_case_id: str
     task: str
     format: str
     score: float
 
 
-class ModelGraderResults(BaseModel):
+class DeterministicGraderResults(RootModel[list[DeterministicGraderResult]]):
+    pass
+
+
+class ModelGraderResult(BaseModel):
     test_case_id: str
     task: str
     format: str
@@ -72,6 +81,10 @@ class ModelGraderResults(BaseModel):
     weaknesses: list[str]
     reasoning: str
     score: float
+
+
+class ModelGraderResults(RootModel[list[ModelGraderResult]]):
+    pass
 
 
 class CombinedResults(BaseModel):
@@ -86,7 +99,7 @@ class CombinedResults(BaseModel):
 
 
 def _print_deterministic_results(
-    results: list[DeterministicGraderResults],
+    results: DeterministicGraderResults,
 ) -> None:
     table = Table(
         "Test Case ID",
@@ -97,7 +110,7 @@ def _print_deterministic_results(
         width=100,
     )
 
-    for result in results:
+    for result in results.root:
         table.add_row(
             result.test_case_id,
             result.task,
@@ -108,7 +121,7 @@ def _print_deterministic_results(
     print_table(table)
 
 
-def _print_model_results(results: list[ModelGraderResults]) -> None:
+def _print_model_results(results: ModelGraderResults) -> None:
     table = Table(
         "Test Case ID",
         "Test Case",
@@ -120,7 +133,7 @@ def _print_model_results(results: list[ModelGraderResults]) -> None:
         title="LLM-Judge Scores",
     )
 
-    for result in results:
+    for result in results.root:
         table.add_row(
             result.test_case_id,
             result.task,
@@ -136,15 +149,15 @@ def _print_model_results(results: list[ModelGraderResults]) -> None:
 
 def _build_combined_results(
     dataset: Dataset,
-    deterministic_results: list[DeterministicGraderResults],
-    model_results: list[ModelGraderResults],
+    deterministic_results: DeterministicGraderResults,
+    model_results: ModelGraderResults,
 ) -> list[CombinedResults]:
     results: list[CombinedResults] = []
 
     for test_case, deterministic_result, model_result in zip(
         dataset.root,
-        deterministic_results,
-        model_results,
+        deterministic_results.root,
+        model_results.root,
         strict=True,
     ):
         results.append(
@@ -216,19 +229,28 @@ def _print_combined_results(
 
 def deterministic(
     dataset: Dataset,
+    solutions: Solutions,
     grader: Grader | None = None,
-) -> list[DeterministicGraderResults]:
-    results = [
-        DeterministicGraderResults(
-            test_case_id=test_case.id,
-            task=test_case.task,
-            format=test_case.format,
-            score=deterministic_grader(test_case, TEST_SOLUTION),
-        )
-        for test_case in dataset.root
-    ]
+) -> DeterministicGraderResults:
 
-    save_results(results, DETERMINISTIC_RESULTS_FILE)
+    solutions_by_id = {
+        solution.test_case_id: solution.solution for solution in solutions.root
+    }
+
+    results = DeterministicGraderResults(root=[])
+
+    for test_case in dataset.root:
+        results.root.append(
+            DeterministicGraderResult(
+                test_case_id=test_case.id,
+                task=test_case.task,
+                format=test_case.format,
+                score=deterministic_grader(test_case, solutions_by_id[test_case.id]),
+            )
+        )
+
+    # save_results(results, DETERMINISTIC_RESULTS_FILE)
+    save_file(results, DETERMINISTIC_RESULTS_FILE)
 
     if grader == Grader.DETERMINISTIC:
         _print_deterministic_results(results)
@@ -238,17 +260,22 @@ def deterministic(
 
 def llm_judge(
     dataset: Dataset,
+    solutions: Solutions,
     grader: Grader | None = None,
-) -> list[ModelGraderResults]:
+) -> ModelGraderResults:
     model_grader = ModelGrader(LLMClient())
 
-    results: list[ModelGraderResults] = []
+    results = ModelGraderResults(root=[])
+
+    solutions_by_id = {
+        solution.test_case_id: solution.solution for solution in solutions.root
+    }
 
     for test_case in dataset.root:
-        response = model_grader.grade(test_case, TEST_SOLUTION)
+        response = model_grader.grade(test_case, solutions_by_id[test_case.id])
 
-        results.append(
-            ModelGraderResults(
+        results.root.append(
+            ModelGraderResult(
                 test_case_id=test_case.id,
                 task=test_case.task,
                 format=test_case.format,
@@ -259,7 +286,8 @@ def llm_judge(
             )
         )
 
-    save_results(results, MODEL_RESULTS_FILE)
+    # save_results(results, MODEL_RESULTS_FILE)
+    save_file(results, DETERMINISTIC_RESULTS_FILE)
 
     if grader == Grader.LLM_JUDGE:
         _print_model_results(results)
@@ -267,14 +295,14 @@ def llm_judge(
     return results
 
 
-def both(dataset: Dataset, verbose: bool) -> None:
+def both(dataset: Dataset, solutions: Solutions, verbose: bool) -> None:
     with console.status("Getting Deterministic Scores..."):
-        deterministic_results = deterministic(dataset)
+        deterministic_results = deterministic(dataset, solutions)
 
     console.print("✓ Getting Deterministic Scores")
 
     with console.status("Getting LLM-Judge Scores..."):
-        model_results = llm_judge(dataset)
+        model_results = llm_judge(dataset, solutions)
 
     console.print("✓ Getting LLM-Judge Scores")
 

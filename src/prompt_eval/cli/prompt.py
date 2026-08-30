@@ -1,17 +1,9 @@
 from pathlib import Path
 
-from pydantic import BaseModel
-
 from prompt_eval.cli.constants import DEFAULT_OUTPUTS_PATH
-from prompt_eval.cli.utils import save_results
+from prompt_eval.cli.utils import save_file
 from prompt_eval.llm import LLMClient
-from prompt_eval.models import Dataset, TestCase
-
-
-class PromptOutput(BaseModel):
-    test_case_id: str
-    task: str
-    solution: str
+from prompt_eval.models import Dataset, Solution, Solutions, TestCase
 
 
 def get_prompt(test_case: TestCase):
@@ -24,10 +16,10 @@ def get_prompt(test_case: TestCase):
         """
 
 
-def run_prompt(dataset: Dataset) -> list[PromptOutput]:
+def run_prompt(dataset: Dataset) -> Solutions:
     llm = LLMClient()
     messages: list[dict[str, str]] = []
-    outputs: list[PromptOutput] = []
+    outputs = Solutions(root=[])
 
     for test_case in dataset.root:
         prompt = get_prompt(test_case)
@@ -36,12 +28,14 @@ def run_prompt(dataset: Dataset) -> list[PromptOutput]:
             {"role": "user", "content": prompt},
             {"role": "assistant", "content": "```code"},
         ]
-        outputs.append(
-            PromptOutput(
+        outputs.root.append(
+            Solution(
                 test_case_id=test_case.id,
                 task=test_case.task,
                 solution=llm.chat(messages, stop_sequences=["```"]),
             )
         )
-    save_results(outputs, Path(DEFAULT_OUTPUTS_PATH))
+
+    save_file(outputs, Path(DEFAULT_OUTPUTS_PATH))
+
     return outputs

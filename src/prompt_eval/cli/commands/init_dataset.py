@@ -45,6 +45,7 @@ def init_dataset(
         err_console.print(
             "\n[red]⚠︎ Dataset already exists at data/dataset.json. Use [code]--regenerate[/code] flag to override exisiting dataset.[/red]\n"
         )
+        raise typer.Exit(code=2)
     else:
         with console.status(f"Generating new dataset with {num_cases} test cases..."):
             generate_dataset(num_cases)

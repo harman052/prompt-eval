@@ -1,13 +1,9 @@
 from pathlib import Path
 
 from prompt_eval.cli.constants import DEFAULT_DATASET_PATH
-from prompt_eval.cli.utils import save_results
+from prompt_eval.cli.utils import load_file, save_file
 from prompt_eval.llm import LLMClient
 from prompt_eval.models import Dataset, GeneratedDataset, TestCase
-
-
-def load_dataset(path: Path) -> Dataset:
-    return Dataset.model_validate_json(path.read_text())
 
 
 def generate_dataset(test_cases_count: int = 3) -> Dataset:
@@ -25,15 +21,17 @@ def generate_dataset(test_cases_count: int = 3) -> Dataset:
 
     generated_dataset = llm.parse(messages, GeneratedDataset)
 
-    test_cases = [
-        TestCase(
-            id=f"{index:03d}",
-            task=test_case.task,
-            format=test_case.format,
-            solution_criteria=test_case.solution_criteria,
-        )
-        for index, test_case in enumerate(generated_dataset.test_cases, start=1)
-    ]
+    test_cases = Dataset(root=[])
 
-    save_results(test_cases, DEFAULT_DATASET_PATH)
-    return load_dataset(DEFAULT_DATASET_PATH)
+    for index, test_case in enumerate(generated_dataset.test_cases, start=1):
+        test_cases.root.append(
+            TestCase(
+                id=f"{index:03d}",
+                task=test_case.task,
+                format=test_case.format,
+                solution_criteria=test_case.solution_criteria,
+            )
+        )
+
+    save_file(test_cases, Path(DEFAULT_DATASET_PATH))
+    return load_file(Dataset, DEFAULT_DATASET_PATH)

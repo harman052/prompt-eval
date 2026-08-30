@@ -24,6 +24,16 @@ class Dataset(RootModel[list[TestCase]]):
     pass
 
 
+class Solution(BaseModel):
+    test_case_id: str
+    task: str
+    solution: str
+
+
+class Solutions(RootModel[list[Solution]]):
+    pass
+
+
 class ModelGrade(BaseModel):
     strengths: list[str]
     weaknesses: list[str]
