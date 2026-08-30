@@ -34,6 +34,9 @@ def init_dataset(
         ),
     ] = DEFAULT_TEST_CASES,
 ):
+    """
+    Creates a test dataset at data/dataset.json via the LLM
+    """
     if regenerate:
         with console.status(f"Generating new dataset with {num_cases} test cases..."):
             generate_dataset(num_cases)
