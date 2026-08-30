@@ -1,101 +1,60 @@
-from pathlib import Path
-
-from pydantic import BaseModel, RootModel
 from rich.console import Console
 from rich.table import Table
 
-from prompt_eval.cli.types import Grader
+from prompt_eval.cli.constants import (
+    COMBINED_RESULTS_FILE,
+    DETERMINISTIC_RESULTS_FILE,
+    MODEL_RESULTS_FILE,
+)
 from prompt_eval.cli.utils import (
     generate_numbered_list,
     print_table,
     save_file,
-    save_results,
 )
 from prompt_eval.graders.deterministic_grader import deterministic_grader
 from prompt_eval.graders.model_grader import ModelGrader
 from prompt_eval.llm import LLMClient
-from prompt_eval.models import Dataset, Solutions
+from prompt_eval.models import (
+    CombinedResult,
+    CombinedResults,
+    Dataset,
+    DeterministicGraderResult,
+    DeterministicGraderResults,
+    ModelGraderResult,
+    ModelGraderResults,
+    Solutions,
+)
 
 console = Console()
 
-RESULTS_DIR = Path("eval_results")
-DETERMINISTIC_RESULTS_FILE = RESULTS_DIR / "deterministic_grader_results.json"
-MODEL_RESULTS_FILE = RESULTS_DIR / "model_grader_results.json"
-COMBINED_RESULTS_FILE = RESULTS_DIR / "combined_results.json"
 
-TEST_SOLUTION = """
-import json
-import sys
-from typing import List
+def _get_solutions_by_id(solutions: Solutions) -> dict[str, str]:
+    """Build a lookup table for solutions keyed by test case ID."""
+    solutions_by_id: dict[str, str] = {}
 
+    for solution in solutions.root:
+        if solution.test_case_id in solutions_by_id:
+            raise ValueError(
+                f"Duplicate solution found for test case '{solution.test_case_id}'."
+            )
 
-def extract_resources_with_depends_on(template: dict) -> List[str]:
-    \"\"\"Extract all resource logical IDs that have a DependsOn property.\"\"\"
-    resources_with_depends_on = []
+        solutions_by_id[solution.test_case_id] = solution.solution
 
-    if "Resources" not in template:
-        return resources_with_depends_on
-
-    resources = template["Resources"]
-
-    for logical_id, resource_config in resources.items():
-        if isinstance(resource_config, dict) and "DependsOn" in resource_config:
-            resources_with_depends_on.append(logical_id)
-
-    return resources_with_depends_on
+    return solutions_by_id
 
 
-def main():
-    if len(sys.argv) > 1:
-        template_file = sys.argv[1]
-        with open(template_file, "r") as f:
-            template = json.load(f)
-    else:
-        template = json.load(sys.stdin)
-
-    result = extract_resources_with_depends_on(template)
-    print(json.dumps(result, indent=2))
-
-
-if __name__ == "__main__":
-    main()
-"""
-
-
-class DeterministicGraderResult(BaseModel):
-    test_case_id: str
-    task: str
-    format: str
-    score: float
-
-
-class DeterministicGraderResults(RootModel[list[DeterministicGraderResult]]):
-    pass
-
-
-class ModelGraderResult(BaseModel):
-    test_case_id: str
-    task: str
-    format: str
-    strengths: list[str]
-    weaknesses: list[str]
-    reasoning: str
-    score: float
-
-
-class ModelGraderResults(RootModel[list[ModelGraderResult]]):
-    pass
-
-
-class CombinedResults(BaseModel):
-    task: str
-    format: str
-    strengths: list[str] | None
-    weaknesses: list[str] | None
-    reasoning: str | None
-    deterministic_score: float
-    llm_judge_score: float
-    final_score: float
+def _get_solution(
+    solutions_by_id: dict[str, str],
+    test_case_id: str,
+) -> str:
+    """Return a solution for a test case or raise a descriptive error."""
+    try:
+        return solutions_by_id[test_case_id]
+    except KeyError as exc:
+        raise ValueError(
+            f"No solution found for test case '{test_case_id}'. "
+            "Make sure the solutions file matches the dataset."
+        ) from exc
 
 
 def _print_deterministic_results(
@@ -130,7 +89,6 @@ def _print_model_results(results: ModelGraderResults) -> None:
         "Weaknesses",
         "Reasoning",
         "LLM-Judge",
-        title="LLM-Judge Scores",
     )
 
     for result in results.root:
@@ -151,17 +109,27 @@ def _build_combined_results(
     dataset: Dataset,
     deterministic_results: DeterministicGraderResults,
     model_results: ModelGraderResults,
-) -> list[CombinedResults]:
-    results: list[CombinedResults] = []
+) -> CombinedResults:
+    deterministic_by_id = {
+        result.test_case_id: result for result in deterministic_results.root
+    }
+    model_by_id = {result.test_case_id: result for result in model_results.root}
 
-    for test_case, deterministic_result, model_result in zip(
-        dataset.root,
-        deterministic_results.root,
-        model_results.root,
-        strict=True,
-    ):
-        results.append(
-            CombinedResults(
+    results = CombinedResults(root=[])
+
+    for test_case in dataset.root:
+        try:
+            deterministic_result = deterministic_by_id[test_case.id]
+            model_result = model_by_id[test_case.id]
+        except KeyError as exc:
+            raise ValueError(
+                f"Missing grader result for test case '{test_case.id}'."
+            ) from exc
+
+        final_score = (deterministic_result.score + model_result.score) / 2
+
+        results.root.append(
+            CombinedResult(
                 task=test_case.task,
                 format=test_case.format,
                 strengths=model_result.strengths,
@@ -169,7 +137,7 @@ def _build_combined_results(
                 reasoning=model_result.reasoning,
                 deterministic_score=deterministic_result.score,
                 llm_judge_score=model_result.score,
-                final_score=(deterministic_result.score + model_result.score) / 2,
+                final_score=final_score,
             )
         )
 
@@ -177,7 +145,7 @@ def _build_combined_results(
 
 
 def _print_combined_results(
-    results: list[CombinedResults],
+    results: CombinedResults,
     verbose: bool,
 ) -> None:
     if verbose:
@@ -193,7 +161,7 @@ def _print_combined_results(
             title="Combined Scores (Deterministic and LLM as Judge)",
         )
 
-        for result in results:
+        for result in results.root:
             table.add_row(
                 result.task,
                 result.format,
@@ -215,7 +183,7 @@ def _print_combined_results(
             width=100,
         )
 
-        for result in results:
+        for result in results.root:
             table.add_row(
                 result.task,
                 result.format,
@@ -228,51 +196,39 @@ def _print_combined_results(
 
 
 def deterministic(
-    dataset: Dataset,
-    solutions: Solutions,
-    grader: Grader | None = None,
+    dataset: Dataset, solutions: Solutions, display_results: bool = True
 ) -> DeterministicGraderResults:
-
-    solutions_by_id = {
-        solution.test_case_id: solution.solution for solution in solutions.root
-    }
-
+    solutions_by_id = _get_solutions_by_id(solutions)
     results = DeterministicGraderResults(root=[])
 
     for test_case in dataset.root:
+        solution = _get_solution(solutions_by_id, test_case.id)
+
         results.root.append(
             DeterministicGraderResult(
                 test_case_id=test_case.id,
                 task=test_case.task,
                 format=test_case.format,
-                score=deterministic_grader(test_case, solutions_by_id[test_case.id]),
+                score=deterministic_grader(test_case, solution),
             )
         )
-
-    # save_results(results, DETERMINISTIC_RESULTS_FILE)
-    save_file(results, DETERMINISTIC_RESULTS_FILE)
-
-    if grader == Grader.DETERMINISTIC:
+    if display_results:
         _print_deterministic_results(results)
 
+    save_file(results, DETERMINISTIC_RESULTS_FILE)
     return results
 
 
 def llm_judge(
-    dataset: Dataset,
-    solutions: Solutions,
-    grader: Grader | None = None,
+    dataset: Dataset, solutions: Solutions, display_results: bool = True
 ) -> ModelGraderResults:
     model_grader = ModelGrader(LLMClient())
-
+    solutions_by_id = _get_solutions_by_id(solutions)
     results = ModelGraderResults(root=[])
 
-    solutions_by_id = {
-        solution.test_case_id: solution.solution for solution in solutions.root
-    }
-
     for test_case in dataset.root:
-        response = model_grader.grade(test_case, solutions_by_id[test_case.id])
+        solution = _get_solution(solutions_by_id, test_case.id)
+        response = model_grader.grade(test_case, solution)
 
         results.root.append(
             ModelGraderResult(
@@ -286,23 +242,25 @@ def llm_judge(
             )
         )
 
-    # save_results(results, MODEL_RESULTS_FILE)
-    save_file(results, DETERMINISTIC_RESULTS_FILE)
-
-    if grader == Grader.LLM_JUDGE:
+    if display_results:
         _print_model_results(results)
 
+    save_file(results, MODEL_RESULTS_FILE)
     return results
 
 
-def both(dataset: Dataset, solutions: Solutions, verbose: bool) -> None:
+def both(
+    dataset: Dataset,
+    solutions: Solutions,
+    verbose: bool,
+) -> CombinedResults:
     with console.status("Getting Deterministic Scores..."):
-        deterministic_results = deterministic(dataset, solutions)
+        deterministic_results = deterministic(dataset, solutions, display_results=False)
 
     console.print("✓ Getting Deterministic Scores")
 
     with console.status("Getting LLM-Judge Scores..."):
-        model_results = llm_judge(dataset, solutions)
+        model_results = llm_judge(dataset, solutions, display_results=False)
 
     console.print("✓ Getting LLM-Judge Scores")
 
@@ -312,6 +270,7 @@ def both(dataset: Dataset, solutions: Solutions, verbose: bool) -> None:
         model_results,
     )
 
-    save_results(combined_results, COMBINED_RESULTS_FILE)
-
+    save_file(combined_results, COMBINED_RESULTS_FILE)
     _print_combined_results(combined_results, verbose)
+
+    return combined_results

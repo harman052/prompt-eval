@@ -48,3 +48,43 @@ class EvaluationResult(BaseModel):
     validity_score: float
     final_score: float
     reasoning: str
+
+
+class DeterministicGraderResult(BaseModel):
+    test_case_id: str
+    task: str
+    format: str
+    score: float
+
+
+class DeterministicGraderResults(RootModel[list[DeterministicGraderResult]]):
+    pass
+
+
+class ModelGraderResult(BaseModel):
+    test_case_id: str
+    task: str
+    format: str
+    strengths: list[str]
+    weaknesses: list[str]
+    reasoning: str
+    score: float
+
+
+class ModelGraderResults(RootModel[list[ModelGraderResult]]):
+    pass
+
+
+class CombinedResult(BaseModel):
+    task: str
+    format: str
+    strengths: list[str] | None
+    weaknesses: list[str] | None
+    reasoning: str | None
+    deterministic_score: float
+    llm_judge_score: float
+    final_score: float
+
+
+class CombinedResults(RootModel[list[CombinedResult]]):
+    pass
