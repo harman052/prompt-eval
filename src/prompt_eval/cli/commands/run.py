@@ -24,7 +24,15 @@ def run(
     prompt: Annotated[
         bool,
         typer.Option(
-            help="Run a prompt through a LLM to generate solutions against test cases for evaluation"
+            "--prompt",
+            help="Run a prompt through a LLM to generate solutions against test cases for evaluation",
+        ),
+    ] = False,
+    set_baseline: Annotated[
+        bool,
+        typer.Option(
+            "--set-baseline",
+            help="Explicitly promote the latest grader results as a new baseline to compare against subsequent runs",
         ),
     ] = False,
     dataset: Annotated[
@@ -36,21 +44,6 @@ def run(
             help="Runs only the deterministic grader, only the LLM judge, or both side by side. Useful to a reviewer specifically because it lets them see the two grading strategies independently and compare them."
         ),
     ] = Grader.BOTH,
-    regenerate: Annotated[
-        bool,
-        typer.Option(
-            "--regenerate",
-            help="Forces dataset regeneration even if data/dataset.json already exists. Use --num-cases to specify the number of test cases to generate.",
-        ),
-    ] = False,
-    num_cases: Annotated[
-        int,
-        typer.Option(
-            "--num-cases",
-            help=f"Number of test cases to generate. Use it with --regenerate flag. Minimum value: {MIN_TEST_CASES}",
-            min=MIN_TEST_CASES,
-        ),
-    ] = DEFAULT_TEST_CASES,
     verbose: Annotated[
         bool,
         typer.Option(
@@ -60,15 +53,6 @@ def run(
     ] = False,
 ):
     test_cases: list[TestCase]
-    if regenerate:
-        with console.status(f"Generating new dataset with {num_cases} test cases..."):
-            test_cases = generate_dataset(num_cases)
-
-            console.print(
-                f"\n[bold green]✓ Dataset generated with {num_cases} test cases at `data/dataset.json`.[/bold green]\n"
-            )
-        raise typer.Exit()
-
     if prompt:
         if dataset.exists() and dataset.is_file():
             test_cases = load_test_cases(dataset)
