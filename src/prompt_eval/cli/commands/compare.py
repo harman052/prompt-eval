@@ -43,6 +43,7 @@ def display_regression_summary(regression_count: int, threshold: float):
 def print_comparison_results(results: ComparisonResults) -> None:
 
     table = Table(
+        "Test Case ID",
         "Test Case",
         "Baseline",
         "Current",
@@ -53,6 +54,7 @@ def print_comparison_results(results: ComparisonResults) -> None:
 
     for result in results.root:
         table.add_row(
+            result.test_case_id,
             result.task,
             str(result.baseline_score),
             str(result.current_score),
@@ -96,16 +98,17 @@ def compare(
         baseline = load_file(CombinedResults, DEFAULT_BASELINE_FILE)
         current = load_file(CombinedResults, DEFAULT_COMBINED_RESULTS_FILE)
 
-        for baseline_scores, current_score in zip(
+        for baseline_results, current_results in zip(
             baseline.root, current.root, strict=True
         ):
             results.root.append(
                 ComparisonResult(
-                    task=baseline_scores.task,
-                    baseline_score=baseline_scores.final_score,
-                    current_score=current_score.final_score,
+                    test_case_id=current_results.test_case_id,
+                    task=baseline_results.task,
+                    baseline_score=baseline_results.final_score,
+                    current_score=current_results.final_score,
                     delta=calcuate_delta(
-                        baseline_scores.final_score, current_score.final_score
+                        baseline_results.final_score, current_results.final_score
                     ),
                 )
             )

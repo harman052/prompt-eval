@@ -121,18 +121,18 @@ def _build_combined_results(
 
     for test_case in dataset.root:
         try:
-            deterministic_result = deterministic_by_id[test_case.id]
-            model_result = model_by_id[test_case.id]
+            deterministic_result = deterministic_by_id[test_case.test_case_id]
+            model_result = model_by_id[test_case.test_case_id]
         except KeyError as exc:
             raise ValueError(
-                f"Missing grader result for test case '{test_case.id}'."
+                f"Missing grader result for test case '{test_case.test_case_id}'."
             ) from exc
 
         final_score = (deterministic_result.score + model_result.score) / 2
 
         results.root.append(
             CombinedResult(
-                test_case_id=test_case.id,
+                test_case_id=test_case.test_case_id,
                 task=test_case.task,
                 format=test_case.format,
                 strengths=model_result.strengths,
@@ -225,11 +225,11 @@ def deterministic(
     results = DeterministicGraderResults(root=[])
 
     for test_case in dataset.root:
-        solution = _get_solution(solutions_by_id, test_case.id)
+        solution = _get_solution(solutions_by_id, test_case.test_case_id)
 
         results.root.append(
             DeterministicGraderResult(
-                test_case_id=test_case.id,
+                test_case_id=test_case.test_case_id,
                 task=test_case.task,
                 format=test_case.format,
                 score=deterministic_grader(test_case, solution),
@@ -260,12 +260,12 @@ def llm_judge(
     results = ModelGraderResults(root=[])
 
     for test_case in dataset.root:
-        solution = _get_solution(solutions_by_id, test_case.id)
+        solution = _get_solution(solutions_by_id, test_case.test_case_id)
         response = model_grader.grade(test_case, solution)
 
         results.root.append(
             ModelGraderResult(
-                test_case_id=test_case.id,
+                test_case_id=test_case.test_case_id,
                 task=test_case.task,
                 format=test_case.format,
                 strengths=response.strengths,

@@ -14,7 +14,7 @@ class GeneratedDataset(BaseModel):
 
 
 class TestCase(BaseModel):
-    id: str
+    test_case_id: str
     task: str
     format: Literal["python", "json", "regex"]
     solution_criteria: str
@@ -92,6 +92,7 @@ class CombinedResults(RootModel[list[CombinedResult]]):
 
 
 class ComparisonResult(BaseModel):
+    test_case_id: str
     task: str
     baseline_score: float
     current_score: float

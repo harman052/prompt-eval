@@ -26,7 +26,7 @@ def generate_dataset(test_cases_count: int = 3) -> Dataset:
     for index, test_case in enumerate(generated_dataset.test_cases, start=1):
         test_cases.root.append(
             TestCase(
-                id=f"{index:03d}",
+                test_case_id=f"{index:03d}",
                 task=test_case.task,
                 format=test_case.format,
                 solution_criteria=test_case.solution_criteria,

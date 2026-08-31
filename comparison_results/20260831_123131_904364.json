@@ -2,19 +2,22 @@
   {
     "test_case_id": "001",
     "task": "Write a Python function to validate AWS S3 bucket names. A valid S3 bucket name must be 3-63 characters long, contain only lowercase letters, numbers, hyphens, and periods, start and end with a letter or number, and cannot contain consecutive periods or hyphens at the start/end.",
-    "format": "python",
-    "solution_criteria": "Function should return True for valid bucket names like 'my-bucket.prod' and False for invalid names like 'My-Bucket', 'my..bucket', '-my-bucket', or 'ab'."
+    "baseline_score": 9.0,
+    "current_score": 9.0,
+    "delta": 0.0
   },
   {
     "test_case_id": "002",
     "task": "Parse an AWS CloudFormation JSON template and extract all resource logical IDs that have a Type of 'AWS::Lambda::Function'. Return them as a sorted list.",
-    "format": "json",
-    "solution_criteria": "Given a CloudFormation template JSON, correctly identify all Lambda function resources and return their logical IDs in alphabetical order. Example: if template has resources 'MyFunction' and 'ApiHandler' both with Type 'AWS::Lambda::Function', return ['ApiHandler', 'MyFunction']."
+    "baseline_score": 6.0,
+    "current_score": 6.0,
+    "delta": 0.0
   },
   {
     "test_case_id": "003",
     "task": "Write a regex pattern to match valid AWS IAM role ARNs. The pattern should match ARNs in the format 'arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME' where ACCOUNT_ID is 12 digits and ROLE_NAME can contain alphanumeric characters, hyphens, and forward slashes.",
-    "format": "regex",
-    "solution_criteria": "Regex should match valid ARNs like 'arn:aws:iam::123456789012:role/MyRole' and 'arn:aws:iam::999999999999:role/path/to/my-role' but reject invalid formats like 'arn:aws:iam::12345:role/test' or 'arn:aws:s3:::bucket/key'."
+    "baseline_score": 9.5,
+    "current_score": 9.5,
+    "delta": 0.0
   }
 ]
