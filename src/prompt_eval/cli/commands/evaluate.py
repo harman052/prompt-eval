@@ -33,12 +33,9 @@ def evaluate(
     fail_under: Annotated[
         float | None,
         typer.Option(
-            "--fail-under",
             help=(
                 "Exit with a non-zero status if the average score across all "
-                "test cases falls below this value. Uses the Final (blended) "
-                "score when both graders ran, or the single grader's score "
-                "when --grader restricts to one."
+                "test cases falls below this value. If unset, no gate is applied."
             ),
         ),
     ] = None,

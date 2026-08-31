@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -25,19 +26,21 @@ err_console = Console(stderr=True)
 app = typer.Typer()
 
 
-def count_regressions(results: ComparisonResults):
-    count: list[ComparisonResult] = [r for r in results.root if r.delta < 0]
+def count_regressions(results: ComparisonResults, threshold: float):
+    count: list[ComparisonResult] = [r for r in results.root if r.delta < -threshold]
     return len(count)
 
 
-def display_regression_summary(regression_count: int):
-    message = f"[bold]{regression_count} {'regression' if regression_count >= 1 else 'regressions'} detected.[/bold]\n"
-    console.print(message)
+def display_regression_summary(regression_count: int, threshold: float):
+    message = "No regressions found"
+    if regression_count > 0:
+        message = f"[bold red]{regression_count} {'regression' if regression_count >= 1 else 'regressions'} detected[/bold red] (threshold: {threshold})\n"
+        err_console.print(message)
+    else:
+        console.print(message)
 
 
-def print_comparison_results(
-    results: ComparisonResults,
-) -> None:
+def print_comparison_results(results: ComparisonResults) -> None:
 
     table = Table(
         "Test Case",
@@ -57,8 +60,6 @@ def print_comparison_results(
         )
 
     print_table(table)
-    count = count_regressions(results)
-    display_regression_summary(count)
 
 
 def persist_comparison_results(results: ComparisonResults):
@@ -75,7 +76,18 @@ def persist_comparison_results(results: ComparisonResults):
 
 
 @app.command()
-def compare():
+def compare(
+    regression_threshold: Annotated[
+        float | None,
+        typer.Option(
+            help=(
+                "Exit with a non-zero status if any test case's score drops by "
+                "more than this amount compared to the baseline. If unset, "
+                "regressions are still reported but never cause a non-zero exit."
+            ),
+        ),
+    ] = None,
+):
     """
     Diffs baseline vs. current
     """
@@ -99,8 +111,15 @@ def compare():
             )
 
         print_comparison_results(results)
+
+        if regression_threshold:
+            regression_count = count_regressions(results, regression_threshold)
+            display_regression_summary(regression_count, regression_threshold)
+            if regression_count > 0:
+                raise typer.Exit(code=1)
+
         persist_comparison_results(results)
 
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         err_console.print(f"[bold red]Comparison failed:[/bold red] {exc}")
         raise typer.Exit(code=1) from exc
