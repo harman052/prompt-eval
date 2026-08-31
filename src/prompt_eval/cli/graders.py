@@ -132,6 +132,7 @@ def _build_combined_results(
 
         results.root.append(
             CombinedResult(
+                test_case_id=test_case.id,
                 task=test_case.task,
                 format=test_case.format,
                 strengths=model_result.strengths,
@@ -152,6 +153,7 @@ def _print_combined_results(
 ) -> None:
     if verbose:
         table = Table(
+            "Test Case ID",
             "Test Case",
             "Format",
             "Strengths",
@@ -165,6 +167,7 @@ def _print_combined_results(
 
         for result in results.root:
             table.add_row(
+                result.test_case_id,
                 result.task,
                 result.format,
                 generate_numbered_list(result.strengths or []),
@@ -176,6 +179,7 @@ def _print_combined_results(
             )
     else:
         table = Table(
+            "Test Case ID",
             "Test Case",
             "Format",
             "Deterministic",
@@ -187,6 +191,7 @@ def _print_combined_results(
 
         for result in results.root:
             table.add_row(
+                result.test_case_id,
                 result.task,
                 result.format,
                 str(result.deterministic_score),
@@ -235,7 +240,7 @@ def deterministic(
 
     if display_results:
         _print_deterministic_results(results)
-        console.print(f"Average score: {average}")
+        console.print(f"Average score: {average:.2f}")
 
     if fail_under != None and average < fail_under:
         exit_with_non_zero_code(fail_under, average)
@@ -274,7 +279,7 @@ def llm_judge(
 
     if display_results:
         _print_model_results(results)
-        console.print(f"Average score: {average}")
+        console.print(f"Average score: {average:.2f}")
 
     if fail_under != None and average < fail_under:
         exit_with_non_zero_code(fail_under, average)
@@ -308,7 +313,7 @@ def both(
     average = calculate_average_score([result.final_score for result in results.root])
 
     _print_combined_results(results, verbose)
-    console.print(f"Average score: {average}")
+    console.print(f"Average final score: {average:.2f}")
 
     if fail_under != None and average < fail_under:
         exit_with_non_zero_code(fail_under, average)

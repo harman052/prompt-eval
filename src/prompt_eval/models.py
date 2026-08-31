@@ -76,6 +76,7 @@ class ModelGraderResults(RootModel[list[ModelGraderResult]]):
 
 
 class CombinedResult(BaseModel):
+    test_case_id: str
     task: str
     format: str
     strengths: list[str] | None
