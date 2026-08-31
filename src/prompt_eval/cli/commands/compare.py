@@ -32,9 +32,9 @@ def count_regressions(results: ComparisonResults, threshold: float):
 
 
 def display_regression_summary(regression_count: int, threshold: float):
-    message = "No regressions found"
+    message = "[bold green]✓ No regressions found.[/bold green]\n"
     if regression_count > 0:
-        message = f"[bold red]{regression_count} {'regression' if regression_count >= 1 else 'regressions'} detected[/bold red] (threshold: {threshold})\n"
+        message = f"[bold red]{regression_count} {'regression' if regression_count >= 1 else 'regressions'} detected[/bold red] (threshold: {threshold:.2f})\n"
         err_console.print(message)
     else:
         console.print(message)
@@ -68,7 +68,7 @@ def persist_comparison_results(results: ComparisonResults):
         file_name = Path(f"{timestamp}.json")
         path = Path(COMPARISON_RESULTS_DIR / file_name)
         save_file(results, path)
-        console.print(f"Comparison written to {path}\n")
+        console.print(f"[bold]Comparison written to {path}[bold]\n")
     except (OSError, ValueError) as exc:
         err_console.print(
             f"[bold red]failed to save comparison results[bold red]: {exc}"
