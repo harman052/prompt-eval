@@ -18,17 +18,86 @@ $ prompt-eval [OPTIONS] COMMAND [ARGS]...
 
 **Commands**:
 
-* `run`
+* `init-dataset`: Creates a test dataset at...
+* `generate`: Generate solution per test case using a LLM
+* `evaluate`: Grade existing outputs using one or more...
+* `set-baseline`: Explicitly sets current results as a new...
+* `compare`: Diffs baseline vs.
 
-## `prompt-eval run`
+## `prompt-eval init-dataset`
+
+Creates a test dataset at data/dataset.json via the LLM
 
 **Usage**:
 
 ```console
-$ prompt-eval run [OPTIONS]
+$ prompt-eval init-dataset [OPTIONS]
 ```
 
 **Options**:
 
-* `--grader <deterministic|llm-judge|both>`: Runs only the deterministic grader, only the LLM judge, or both side by side. Useful to a reviewer specifically because it lets them see the two grading strategies independently and compare them  [default: both]
+* `--regenerate`: Forces dataset regeneration even if data/dataset.json already exists. Use --num-cases to specify the number of test cases to generate.
+* `--num-cases <int range>`: Number of test cases to generate. Use it with --regenerate flag. Minimum value: 1  [default: 3; x&gt;=1]
+* `--help`: Show this message and exit.
+
+## `prompt-eval generate`
+
+Generate solution per test case using a LLM
+
+**Usage**:
+
+```console
+$ prompt-eval generate [OPTIONS]
+```
+
+**Options**:
+
+* `--dataset <path>`: Path where the test dataset is loaded from.  [default: data/dataset.json]
+* `--help`: Show this message and exit.
+
+## `prompt-eval evaluate`
+
+Grade existing outputs using one or more graders.
+
+**Usage**:
+
+```console
+$ prompt-eval evaluate [OPTIONS]
+```
+
+**Options**:
+
+* `--dataset <path>`: Path where the test dataset is loaded from.  [default: data/dataset.json]
+* `--grader <deterministic|llm-judge|both>`: Specify the grader to run  [default: both]
+* `--fail-under <float>`: Exit with a non-zero status if the average score across all test cases falls below this value. If unset, no gate is applied.
+* `--verbose`: Display detailed LLM-Judge reasoning.
+* `--help`: Show this message and exit.
+
+## `prompt-eval set-baseline`
+
+Explicitly sets current results as a new baseline for comparisons
+
+**Usage**:
+
+```console
+$ prompt-eval set-baseline [OPTIONS]
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+## `prompt-eval compare`
+
+Diffs baseline vs. current
+
+**Usage**:
+
+```console
+$ prompt-eval compare [OPTIONS]
+```
+
+**Options**:
+
+* `--regression-threshold <float>`: Exit with a non-zero status if any test case&#x27;s score drops by more than this amount compared to the baseline. If unset, regressions are still reported but never cause a non-zero exit.
 * `--help`: Show this message and exit.
