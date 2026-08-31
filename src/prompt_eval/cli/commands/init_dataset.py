@@ -53,5 +53,5 @@ def init_dataset(
             generate_dataset(num_cases)
 
             console.print(
-                f"\n[green bold]✓ Dataset generated with {num_cases} test cases at data/dataset.json.[/green bold]\n"
+                f"\n[green bold]✓ Dataset generated with {num_cases} test {'cases' if num_cases > 1 else 'case'} at data/dataset.json.[/green bold]\n"
             )
