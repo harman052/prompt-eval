@@ -4,4 +4,3 @@ Task:
 {task}
 
 * The entire response must be valid {format} source.
-* Do not add any comments or commentary or explanation
