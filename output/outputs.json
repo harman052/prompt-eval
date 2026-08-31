@@ -1,17 +1,24 @@
-[
-  {
-    "test_case_id": "001",
-    "task": "Write a Python function to validate AWS S3 bucket names. A valid S3 bucket name must be 3-63 characters long, contain only lowercase letters, numbers, hyphens, and periods, start and end with a letter or number, and cannot contain consecutive periods or hyphens at the start/end.",
-    "solution": "\nimport re\n\ndef validate_s3_bucket_name(bucket_name):\n    \"\"\"\n    Validates an AWS S3 bucket name according to AWS naming rules.\n    \n    Rules:\n    - Must be 3-63 characters long\n    - Can only contain lowercase letters, numbers, hyphens, and periods\n    - Must start and end with a letter or number\n    - Cannot contain consecutive periods\n    - Cannot start or end with hyphens\n    \n    Args:\n        bucket_name (str): The bucket name to validate\n        \n    Returns:\n        bool: True if valid, False otherwise\n    \"\"\"\n    \n    if not isinstance(bucket_name, str):\n        return False\n    \n    if len(bucket_name) < 3 or len(bucket_name) > 63:\n        return False\n    \n    if not re.match(r'^[a-z0-9]', bucket_name):\n        return False\n    \n    if not re.match(r'[a-z0-9]$', bucket_name):\n        return False\n    \n    if bucket_name.startswith('-') or bucket_name.endswith('-'):\n        return False\n    \n    if '..' in bucket_name:\n        return False\n    \n    if not re.match(r'^[a-z0-9.-]+$', bucket_name):\n        return False\n    \n    return True\n\n\nif __name__ == \"__main__\":\n    test_cases = [\n        (\"my-bucket\", True),\n        (\"my.bucket\", True),\n        (\"mybucket123\", True),\n        (\"a\", False),\n        (\"ab\", False),\n        (\"abc\", True),\n        (\"my_bucket\", False),\n        (\"MyBucket\", False),\n        (\"my-bucket-\", False),\n        (\"-my-bucket\", False),\n        (\"my..bucket\", False),\n        (\"my-bucket-123\", True),\n        (\"a\" * 63, True),\n        (\"a\" * 64, False),\n        (\"my.bucket.name\", True),\n        (\"bucket!\", False),\n        (\"\", False),\n        (\"my bucket\", False),\n    ]\n    \n    for bucket_name, expected in test_cases:\n        result = validate_s3_bucket_name(bucket_name)\n        status = \"✓\" if result == expected else \"✗\"\n        print(f\"{status} {bucket_name!r}: {result} (expected {expected})\")\n"
+{
+  "metadata": {
+    "prompt_version": "acae381-dirty",
+    "model": "claude-haiku-4-5-20251001",
+    "run_at": "2026-08-31T20:13:48.490332+00:00"
   },
-  {
-    "test_case_id": "002",
-    "task": "Parse an AWS CloudFormation JSON template and extract all resource logical IDs that have a Type of 'AWS::Lambda::Function'. Return them as a sorted list.",
-    "solution": "\n{\"parse_cloudformation\": \"function\", \"extract_lambda_functions\": \"task\", \"response_format\": \"json\", \"note\": \"Ready to process CloudFormation template - please provide the template JSON\"}\n"
-  },
-  {
-    "test_case_id": "003",
-    "task": "Write a regex pattern to match valid AWS IAM role ARNs. The pattern should match ARNs in the format 'arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME' where ACCOUNT_ID is 12 digits and ROLE_NAME can contain alphanumeric characters, hyphens, and forward slashes.",
-    "solution": "\n^arn:aws:iam::\\d{12}:role/[a-zA-Z0-9/_-]+$\n"
-  }
-]
+  "solutions": [
+    {
+      "test_case_id": "001",
+      "task": "Write a Python function to validate AWS S3 bucket names. A valid S3 bucket name must be 3-63 characters long, contain only lowercase letters, numbers, hyphens, and periods, start and end with a letter or number, and cannot contain consecutive periods or hyphens at the start/end.",
+      "solution": "\nimport re\n\ndef validate_s3_bucket_name(bucket_name: str) -> bool:\n    if not isinstance(bucket_name, str):\n        return False\n    \n    if len(bucket_name) < 3 or len(bucket_name) > 63:\n        return False\n    \n    if not re.match(r'^[a-z0-9]', bucket_name):\n        return False\n    \n    if not re.match(r'[a-z0-9]$', bucket_name):\n        return False\n    \n    if '..' in bucket_name:\n        return False\n    \n    if bucket_name.startswith('-') or bucket_name.endswith('-'):\n        return False\n    \n    if not re.match(r'^[a-z0-9.-]+$', bucket_name):\n        return False\n    \n    return True\n\n\nif __name__ == \"__main__\":\n    test_cases = [\n        (\"my-bucket\", True),\n        (\"my.bucket\", True),\n        (\"mybucket123\", True),\n        (\"a\", False),\n        (\"ab\", False),\n        (\"abc\", True),\n        (\"my-bucket-\", False),\n        (\"-my-bucket\", False),\n        (\"my..bucket\", False),\n        (\"my_bucket\", False),\n        (\"MY-BUCKET\", False),\n        (\"my-bucket\" + \"x\" * 60, False),\n        (\"my-bucket.test\", True),\n        (\"1bucket\", True),\n        (\"bucket1\", True),\n    ]\n    \n    for bucket_name, expected in test_cases:\n        result = validate_s3_bucket_name(bucket_name)\n        status = \"PASS\" if result == expected else \"FAIL\"\n        print(f\"{status}: {bucket_name} -> {result} (expected {expected})\")\n"
+    },
+    {
+      "test_case_id": "002",
+      "task": "Parse an AWS CloudFormation JSON template and extract all resource logical IDs that have a Type of 'AWS::Lambda::Function'. Return them as a sorted list.",
+      "solution": "\nI need to see the CloudFormation template to parse it. Please provide the JSON template you'd like me to analyze.\n"
+    },
+    {
+      "test_case_id": "003",
+      "task": "Write a regex pattern to match valid AWS IAM role ARNs. The pattern should match ARNs in the format 'arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME' where ACCOUNT_ID is 12 digits and ROLE_NAME can contain alphanumeric characters, hyphens, and forward slashes.",
+      "solution": "\n^arn:aws:iam::\\d{12}:role/[\\w\\-/]+$\n"
+    }
+  ]
+}

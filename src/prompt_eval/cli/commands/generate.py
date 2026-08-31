@@ -8,7 +8,7 @@ from prompt_eval.cli.constants import (
     DEFAULT_DATASET_FILE,
     DEFAULT_OUTPUTS_FILE,
 )
-from prompt_eval.cli.prompt import run_prompt
+from prompt_eval.cli.prompt import generate_prompt_output
 from prompt_eval.cli.utils import load_file, print_dataset_error
 
 # from prompt_eval.dataset import load_dataset
@@ -35,7 +35,7 @@ def generate(
 
     with console.status("Generating solutions to test cases..."):
         test_cases = load_file(Dataset, dataset)
-        run_prompt(test_cases)
+        generate_prompt_output(test_cases)
         console.print(
             f"\n[green bold]✓ Solution per test case are saved in {DEFAULT_OUTPUTS_FILE}.[/green bold]\n"
         )

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -10,11 +12,14 @@ from prompt_eval.cli.constants import (
 from prompt_eval.cli.utils import (
     err_console,
     generate_numbered_list,
+    get_prompt_metadata,
     print_table,
     save_file,
 )
+from prompt_eval.config import settings
 from prompt_eval.graders.deterministic_grader import deterministic_grader
 from prompt_eval.graders.model_grader import ModelGrader
+from prompt_eval.graders.versioning import get_prompt_version
 from prompt_eval.llm import LLMClient
 from prompt_eval.models import (
     CombinedResult,
@@ -34,7 +39,7 @@ def _get_solutions_by_id(solutions: Solutions) -> dict[str, str]:
     """Build a lookup table for solutions keyed by test case ID."""
     solutions_by_id: dict[str, str] = {}
 
-    for solution in solutions.root:
+    for solution in solutions.solutions:
         if solution.test_case_id in solutions_by_id:
             raise ValueError(
                 f"Duplicate solution found for test case '{solution.test_case_id}'."
@@ -71,7 +76,7 @@ def _print_deterministic_results(
         width=100,
     )
 
-    for result in results.root:
+    for result in results.results:
         table.add_row(
             result.test_case_id,
             result.task,
@@ -93,7 +98,7 @@ def _print_model_results(results: ModelGraderResults) -> None:
         "LLM-Judge",
     )
 
-    for result in results.root:
+    for result in results.results:
         table.add_row(
             result.test_case_id,
             result.task,
@@ -113,11 +118,14 @@ def _build_combined_results(
     model_results: ModelGraderResults,
 ) -> CombinedResults:
     deterministic_by_id = {
-        result.test_case_id: result for result in deterministic_results.root
+        result.test_case_id: result for result in deterministic_results.results
     }
-    model_by_id = {result.test_case_id: result for result in model_results.root}
+    model_by_id = {result.test_case_id: result for result in model_results.results}
 
-    results = CombinedResults(root=[])
+    results: CombinedResults = CombinedResults(
+        metadata=get_prompt_metadata(),
+        results=[],
+    )
 
     for test_case in dataset.root:
         try:
@@ -130,7 +138,7 @@ def _build_combined_results(
 
         final_score = (deterministic_result.score + model_result.score) / 2
 
-        results.root.append(
+        results.results.append(
             CombinedResult(
                 test_case_id=test_case.test_case_id,
                 task=test_case.task,
@@ -165,7 +173,7 @@ def _print_combined_results(
             title="Combined Scores (Deterministic and LLM as Judge)",
         )
 
-        for result in results.root:
+        for result in results.results:
             table.add_row(
                 result.test_case_id,
                 result.task,
@@ -189,7 +197,7 @@ def _print_combined_results(
             width=100,
         )
 
-        for result in results.root:
+        for result in results.results:
             table.add_row(
                 result.test_case_id,
                 result.task,
@@ -222,12 +230,15 @@ def deterministic(
     fail_under: float | None = None,
 ) -> DeterministicGraderResults:
     solutions_by_id = _get_solutions_by_id(solutions)
-    results = DeterministicGraderResults(root=[])
+    results: DeterministicGraderResults = DeterministicGraderResults(
+        metadata=get_prompt_metadata(),
+        results=[],
+    )
 
     for test_case in dataset.root:
         solution = _get_solution(solutions_by_id, test_case.test_case_id)
 
-        results.root.append(
+        results.results.append(
             DeterministicGraderResult(
                 test_case_id=test_case.test_case_id,
                 task=test_case.task,
@@ -236,7 +247,7 @@ def deterministic(
             )
         )
 
-    average = calculate_average_score([result.score for result in results.root])
+    average = calculate_average_score([result.score for result in results.results])
 
     if display_results:
         _print_deterministic_results(results)
@@ -257,13 +268,16 @@ def llm_judge(
 ) -> ModelGraderResults:
     model_grader = ModelGrader(LLMClient())
     solutions_by_id = _get_solutions_by_id(solutions)
-    results = ModelGraderResults(root=[])
+    results: ModelGraderResults = ModelGraderResults(
+        metadata=get_prompt_metadata(),
+        results=[],
+    )
 
     for test_case in dataset.root:
         solution = _get_solution(solutions_by_id, test_case.test_case_id)
         response = model_grader.grade(test_case, solution)
 
-        results.root.append(
+        results.results.append(
             ModelGraderResult(
                 test_case_id=test_case.test_case_id,
                 task=test_case.task,
@@ -275,7 +289,7 @@ def llm_judge(
             )
         )
 
-    average = calculate_average_score([result.score for result in results.root])
+    average = calculate_average_score([result.score for result in results.results])
 
     if display_results:
         _print_model_results(results)
@@ -310,7 +324,9 @@ def both(
         model_results,
     )
 
-    average = calculate_average_score([result.final_score for result in results.root])
+    average = calculate_average_score(
+        [result.final_score for result in results.results]
+    )
 
     _print_combined_results(results, verbose)
     console.print(f"Average final score: {average:.2f}")

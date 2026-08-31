@@ -13,4 +13,7 @@ wheels/
 .env
 
 # evaluation-generated files
-eval_results/*
+eval_results/
+
+# comparison files
+comparison_results/

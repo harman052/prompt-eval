@@ -14,6 +14,7 @@ from prompt_eval.cli.constants import (
 from prompt_eval.cli.utils import (
     calcuate_delta,
     format_delta,
+    get_prompt_metadata,
     load_file,
     print_table,
     save_file,
@@ -27,7 +28,7 @@ app = typer.Typer()
 
 
 def count_regressions(results: ComparisonResults, threshold: float):
-    count: list[ComparisonResult] = [r for r in results.root if r.delta < -threshold]
+    count: list[ComparisonResult] = [r for r in results.results if r.delta < -threshold]
     return len(count)
 
 
@@ -52,7 +53,7 @@ def print_comparison_results(results: ComparisonResults) -> None:
         width=100,
     )
 
-    for result in results.root:
+    for result in results.results:
         table.add_row(
             result.test_case_id,
             result.task,
@@ -93,15 +94,18 @@ def compare(
     """
     Diffs baseline vs. current
     """
-    results = ComparisonResults(root=[])
+    results: ComparisonResults = ComparisonResults(
+        metadata=get_prompt_metadata(),
+        results=[],
+    )
     try:
         baseline = load_file(CombinedResults, DEFAULT_BASELINE_FILE)
         current = load_file(CombinedResults, DEFAULT_COMBINED_RESULTS_FILE)
 
         for baseline_results, current_results in zip(
-            baseline.root, current.root, strict=True
+            baseline.results, current.results, strict=True
         ):
-            results.root.append(
+            results.results.append(
                 ComparisonResult(
                     test_case_id=current_results.test_case_id,
                     task=baseline_results.task,

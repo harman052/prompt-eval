@@ -1,10 +1,14 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel
 from rich.console import Console
 from rich.table import Table
 
-from prompt_eval.cli.constants import DEFAULT_TEST_CASES, MIN_TEST_CASES
+from prompt_eval.cli.constants import DEFAULT_TEST_CASES, MIN_TEST_CASES, PROMPTS_DIR
+from prompt_eval.config import settings
+from prompt_eval.graders.versioning import get_prompt_version
+from prompt_eval.models import PromptMetadata
 
 console = Console()
 err_console = Console(stderr=True)
@@ -63,3 +67,16 @@ def format_delta(score: float):
         return f"[bold red]{score}[/bold red]"
     else:
         return "[bold dim]0[/bold dim]"
+
+
+def load_prompt(name: str) -> str:
+    path = PROMPTS_DIR / f"{name}.txt"
+    return path.read_text()
+
+
+def get_prompt_metadata() -> PromptMetadata:
+    return PromptMetadata(
+        prompt_version=get_prompt_version(),
+        model=settings.claude_model,
+        run_at=datetime.now(UTC).isoformat(),
+    )

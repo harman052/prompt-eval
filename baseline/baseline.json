@@ -1,71 +1,83 @@
-[
-  {
-    "test_case_id": "001",
-    "task": "Write a Python function to validate AWS S3 bucket names. A valid S3 bucket name must be 3-63 characters long, contain only lowercase letters, numbers, hyphens, and periods, start and end with a letter or number, and cannot contain consecutive periods or hyphens at the start/end.",
-    "format": "python",
-    "strengths": [
-      "Comprehensive validation logic that correctly implements all AWS S3 bucket naming rules",
-      "Well-documented function with clear docstring explaining all rules",
-      "Proper type checking to handle non-string inputs",
-      "Good test coverage with 18 test cases covering edge cases and common scenarios",
-      "Clean, readable code structure with sequential validation checks",
-      "Correctly handles all criteria examples: rejects 'My-Bucket' (uppercase), 'my..bucket' (consecutive periods), '-my-bucket' (starts with hyphen), and 'ab' (too short)",
-      "Appropriate use of regex for pattern matching",
-      "Accepts valid examples like 'my-bucket.prod'"
-    ],
-    "weaknesses": [
-      "Redundant validation checks - the final regex pattern check `r'^[a-z0-9.-]+$'` combined with earlier start/end checks makes some earlier checks unnecessary",
-      "The check for hyphens at start/end is redundant since the start/end regex checks already ensure alphanumeric characters at boundaries",
-      "Could be more efficient by combining multiple regex checks into a single pattern rather than using 5+ separate validations",
-      "Minor: No validation error messages or reasons provided - only returns boolean, which could make debugging harder for users",
-      "No explicit handling or mention of AWS's additional rules about bucket names not being valid IP addresses (e.g., '192.168.1.1' would currently pass validation but is invalid in AWS)"
-    ],
-    "reasoning": "The solution correctly implements the core AWS S3 bucket naming validation rules specified in the task. It successfully validates all the criteria examples and passes comprehensive test cases. The logic is sound and handles edge cases appropriately. However, the code has some redundancy in validation checks that could be optimized. The most significant missing feature is validation against IP address-like patterns, which is an actual AWS S3 requirement not mentioned in the original task description. The code structure is clear and maintainable, though combining checks would improve efficiency. Overall, this is a functional and correct solution that addresses the stated requirements well, with room for optimization and one potentially missing AWS rule.",
-    "deterministic_score": 10.0,
-    "llm_judge_score": 8.0,
-    "final_score": 9.0
+{
+  "metadata": {
+    "prompt_version": "acae381-dirty",
+    "model": "claude-haiku-4-5-20251001",
+    "run_at": "2026-08-31T20:19:23.490236+00:00"
   },
-  {
-    "test_case_id": "002",
-    "task": "Parse an AWS CloudFormation JSON template and extract all resource logical IDs that have a Type of 'AWS::Lambda::Function'. Return them as a sorted list.",
-    "format": "json",
-    "strengths": [
-      "The solution correctly identifies the core task of parsing CloudFormation templates and extracting Lambda functions",
-      "It acknowledges the need for JSON response format as specified in the criteria"
-    ],
-    "weaknesses": [
-      "The solution is incomplete - it does not provide actual implementation code to parse JSON and filter resources",
-      "It does not demonstrate how to extract the Type field or filter by 'AWS::Lambda::Function'",
-      "It does not show how to sort the logical IDs alphabetically",
-      "It appears to be a placeholder or pseudo-code rather than a working solution",
-      "It requests user input instead of providing a functional parser",
-      "No actual parsing logic is implemented - it's unclear how this would handle a real CloudFormation template"
-    ],
-    "reasoning": "The task requires a functional solution that can parse CloudFormation JSON templates and extract Lambda function logical IDs in sorted order. The provided solution is merely a declaration of intent with no executable code. It lacks the critical implementation details: JSON parsing logic, resource filtering by Type, extraction of logical IDs, and alphabetical sorting. While it shows understanding of the problem domain, it fails to deliver any mechanism that would actually solve the stated problem. A proper solution would need to iterate through the Resources object, check each resource's Type property, collect those matching 'AWS::Lambda::Function', extract their keys (logical IDs), and sort them.",
-    "deterministic_score": 10.0,
-    "llm_judge_score": 2.0,
-    "final_score": 6.0
-  },
-  {
-    "test_case_id": "003",
-    "task": "Write a regex pattern to match valid AWS IAM role ARNs. The pattern should match ARNs in the format 'arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME' where ACCOUNT_ID is 12 digits and ROLE_NAME can contain alphanumeric characters, hyphens, and forward slashes.",
-    "format": "regex",
-    "strengths": [
-      "The regex correctly uses `^arn:aws:iam::` to match the literal prefix",
-      "Uses `\\d{12}` to enforce exactly 12 digits for the ACCOUNT_ID as required",
-      "Correctly anchors with `^` at the start and `$` at the end to prevent partial matches",
-      "The character class `[a-zA-Z0-9/_-]` includes all required characters: alphanumeric, hyphens, forward slashes",
-      "Uses `+` quantifier to require at least one character in the ROLE_NAME portion",
-      "Successfully rejects invalid formats like wrong service type (s3) or incorrect account ID length"
-    ],
-    "weaknesses": [
-      "The hyphen placement in the character class `[a-zA-Z0-9/_-]` is correct but could be positioned at the end for clarity, though it works as written",
-      "Does not explicitly validate that role names follow AWS naming conventions (e.g., role names should not start with special characters), though this may be outside the stated requirements",
-      "The pattern allows consecutive forward slashes and hyphens, which while technically allowed by the regex, may not represent realistic AWS role paths"
-    ],
-    "reasoning": "The regex pattern effectively solves the task as specified. It correctly matches valid AWS IAM role ARNs in the exact format requested and properly rejects the invalid examples provided. The pattern enforces the 12-digit account ID requirement and allows the correct character set for role names including paths. The solution is concise, uses appropriate quantifiers, and includes proper anchoring. While there are minor considerations around edge cases and AWS naming conventions, these are not explicitly required by the task specification. The pattern demonstrates solid understanding of regex fundamentals and the AWS ARN format.",
-    "deterministic_score": 10.0,
-    "llm_judge_score": 9.0,
-    "final_score": 9.5
-  }
-]
+  "results": [
+    {
+      "test_case_id": "001",
+      "task": "Write a Python function to validate AWS S3 bucket names. A valid S3 bucket name must be 3-63 characters long, contain only lowercase letters, numbers, hyphens, and periods, start and end with a letter or number, and cannot contain consecutive periods or hyphens at the start/end.",
+      "format": "python",
+      "strengths": [
+        "The function correctly validates the length requirement (3-63 characters)",
+        "Proper type checking to ensure input is a string",
+        "Correctly rejects uppercase letters with case-sensitive regex patterns",
+        "Properly rejects consecutive periods with the '..' check",
+        "Correctly rejects hyphens at the start or end of the bucket name",
+        "Comprehensive test suite that covers most edge cases",
+        "Allows only lowercase letters, numbers, hyphens, and periods as specified",
+        "Correctly rejects underscores and other invalid characters",
+        "The logic flow is clear and easy to follow",
+        "All regex patterns are appropriate for the requirements"
+      ],
+      "weaknesses": [
+        "Redundant regex matching - the final check `^[a-z0-9.-]+$` makes the earlier individual character checks partially redundant",
+        "The solution performs 5 separate regex operations which could be combined into a single comprehensive regex for better performance",
+        "The final regex pattern `^[a-z0-9.-]+$` doesn't explicitly prevent consecutive hyphens, though the task description doesn't explicitly require this check either",
+        "No explicit handling or documentation about what happens with None input (though the isinstance check covers it)",
+        "Minor inefficiency: checking for '-' at start/end after already validating first/last character are letters/numbers is somewhat redundant"
+      ],
+      "reasoning": "The solution correctly implements all the stated requirements from the task. It validates bucket name length (3-63 chars), enforces lowercase letters/numbers/hyphens/periods only, requires starting and ending with alphanumeric characters, and rejects consecutive periods. The comprehensive test suite verifies correct behavior for valid cases like 'my-bucket', 'my.bucket', '1bucket' and correctly rejects invalid cases like '-my-bucket', 'my..bucket', 'MY-BUCKET', and 'ab'. The code is readable and handles edge cases well. The main weaknesses are code efficiency issues (multiple regex calls, redundant checks) rather than correctness issues. The solution passes all provided test cases and meets the stated criteria.",
+      "deterministic_score": 10.0,
+      "llm_judge_score": 8.0,
+      "final_score": 9.0
+    },
+    {
+      "test_case_id": "002",
+      "task": "Parse an AWS CloudFormation JSON template and extract all resource logical IDs that have a Type of 'AWS::Lambda::Function'. Return them as a sorted list.",
+      "format": "json",
+      "strengths": [
+        "The response acknowledges the need for input",
+        "The request for clarification shows awareness that a template is required to complete the task"
+      ],
+      "weaknesses": [
+        "Fails to provide any actual implementation or code solution",
+        "Does not demonstrate understanding of JSON parsing or CloudFormation structure",
+        "Does not show how to filter resources by Type or sort logical IDs",
+        "Does not provide example code in any language (Python, JavaScript, etc.)",
+        "Completely fails to address the core requirement - extracting Lambda function resource IDs",
+        "A response asking for input is not a solution to the given task",
+        "Does not explain the algorithm or approach that would be used",
+        "Does not handle edge cases like missing Type fields or malformed JSON"
+      ],
+      "reasoning": "The task explicitly asks for a solution to parse CloudFormation templates and extract Lambda function logical IDs. The provided response is merely a request for input data rather than an actual solution. A proper solution should include code that: (1) parses JSON, (2) iterates through the Resources section, (3) filters for Type=='AWS::Lambda::Function', (4) extracts logical IDs, and (5) returns them sorted alphabetically. The response demonstrates no implementation, no algorithm design, and no understanding of the technical requirements. While asking clarifying questions can be appropriate in some contexts, the task is sufficiently clear that a working solution should be provided.",
+      "deterministic_score": 0.0,
+      "llm_judge_score": 1.0,
+      "final_score": 0.5
+    },
+    {
+      "test_case_id": "003",
+      "task": "Write a regex pattern to match valid AWS IAM role ARNs. The pattern should match ARNs in the format 'arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME' where ACCOUNT_ID is 12 digits and ROLE_NAME can contain alphanumeric characters, hyphens, and forward slashes.",
+      "format": "regex",
+      "strengths": [
+        "Correctly anchors the pattern with ^ and $ to match the entire string",
+        "Properly validates the account ID with exactly 12 digits using \\d{12}",
+        "Uses the correct AWS ARN prefix 'arn:aws:iam::'",
+        "Correctly uses \\w to match alphanumeric characters",
+        "Includes support for hyphens with \\-",
+        "Includes support for forward slashes with /",
+        "The pattern is concise and readable"
+      ],
+      "weaknesses": [
+        "The character class [\\w\\-/]+ allows one or more characters, but doesn't validate that ROLE_NAME actually starts with a valid character - while \\w includes letters, digits, and underscore, the pattern allows leading underscores which may not be ideal for role names",
+        "Does not explicitly prevent matching invalid characters that might be problematic in real AWS role names (e.g., the pattern would match 'arn:aws:iam::123456789012:role/___' which is unlikely to be a valid role name)",
+        "The \\w character class includes underscores, which while technically valid in role names, is often not mentioned in the requirements"
+      ],
+      "reasoning": "The regex pattern successfully matches the required format and will correctly validate the test cases provided in the criteria. It will accept valid ARNs like 'arn:aws:iam::123456789012:role/MyRole' and 'arn:aws:iam::999999999999:role/path/to/my-role' while rejecting invalid formats like 'arn:aws:iam::12345:role/test' (wrong account ID length) and 'arn:aws:s3:::bucket/key' (wrong service). The pattern is clean and appropriate for the task. The main limitation is that it's quite permissive with what constitutes a valid ROLE_NAME (e.g., allows sequences like underscores), but this is a minor issue since AWS does permit underscores and the pattern still enforces the structural requirements effectively.",
+      "deterministic_score": 10.0,
+      "llm_judge_score": 8.0,
+      "final_score": 9.0
+    }
+  ]
+}

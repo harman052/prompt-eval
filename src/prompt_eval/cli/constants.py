@@ -1,5 +1,8 @@
 from pathlib import Path
 
+DEFAULT_TEST_CASES = 3
+MIN_TEST_CASES = 1
+
 # Paths
 DATA_DIR = Path("data")
 DEFAULT_DATASET_FILE = DATA_DIR / "dataset.json"
@@ -23,5 +26,4 @@ DETERMINISTIC_RESULTS_FILE = EVAL_RESULTS_DIR / "deterministic_grader_results.js
 MODEL_RESULTS_FILE = EVAL_RESULTS_DIR / "model_grader_results.json"
 COMBINED_RESULTS_FILE = EVAL_RESULTS_DIR / "combined_results.json"
 
-DEFAULT_TEST_CASES = 3
-MIN_TEST_CASES = 1
+PROMPTS_DIR = Path("prompts")

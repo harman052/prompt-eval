@@ -30,8 +30,15 @@ class Solution(BaseModel):
     solution: str
 
 
-class Solutions(RootModel[list[Solution]]):
-    pass
+class PromptMetadata(BaseModel):
+    prompt_version: str
+    model: str
+    run_at: str
+
+
+class Solutions(BaseModel):
+    metadata: PromptMetadata
+    solutions: list[Solution]
 
 
 class ModelGrade(BaseModel):
@@ -57,8 +64,9 @@ class DeterministicGraderResult(BaseModel):
     score: float
 
 
-class DeterministicGraderResults(RootModel[list[DeterministicGraderResult]]):
-    pass
+class DeterministicGraderResults(BaseModel):
+    metadata: PromptMetadata
+    results: list[DeterministicGraderResult]
 
 
 class ModelGraderResult(BaseModel):
@@ -71,8 +79,9 @@ class ModelGraderResult(BaseModel):
     score: float
 
 
-class ModelGraderResults(RootModel[list[ModelGraderResult]]):
-    pass
+class ModelGraderResults(BaseModel):
+    metadata: PromptMetadata
+    results: list[ModelGraderResult]
 
 
 class CombinedResult(BaseModel):
@@ -87,8 +96,9 @@ class CombinedResult(BaseModel):
     final_score: float
 
 
-class CombinedResults(RootModel[list[CombinedResult]]):
-    pass
+class CombinedResults(BaseModel):
+    metadata: PromptMetadata
+    results: list[CombinedResult]
 
 
 class ComparisonResult(BaseModel):
@@ -99,5 +109,6 @@ class ComparisonResult(BaseModel):
     delta: float
 
 
-class ComparisonResults(RootModel[list[ComparisonResult]]):
-    pass
+class ComparisonResults(BaseModel):
+    metadata: PromptMetadata
+    results: list[ComparisonResult]

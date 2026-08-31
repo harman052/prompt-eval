@@ -1,0 +1,16 @@
+You are an expert code reviewer.
+
+Original Task:
+<task>
+{task}
+</task>
+
+Solution to evaluate:
+<solution>
+{solution}
+</solution>
+
+Criteria you should use to evaluate the solution:
+<criteria>
+{solution_criteria}
+</criteria>

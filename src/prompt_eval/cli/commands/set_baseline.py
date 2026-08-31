@@ -25,7 +25,7 @@ def set_baseline():
         destination = Path(DEFAULT_BASELINE_FILE)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(DEFAULT_COMBINED_RESULTS_FILE, DEFAULT_BASELINE_FILE)
-        console.print("[bold green]✓ A new baseline is set.[/bold green]")
+        console.print("\n[bold green]✓ A new baseline is set.[/bold green]\n")
     except Exception as exc:
-        err_console.print(f"[bold red]Failed to set new baseline:[/bold red] {exc}")
+        err_console.print(f"\n[bold red]Failed to set new baseline:[/bold red] {exc}\n")
         raise typer.Exit(code=1) from exc
