@@ -30,6 +30,18 @@ def evaluate(
             help=("Specify the grader to run"),
         ),
     ] = Grader.BOTH,
+    fail_under: Annotated[
+        float | None,
+        typer.Option(
+            "--fail-under",
+            help=(
+                "Exit with a non-zero status if the average score across all "
+                "test cases falls below this value. Uses the Final (blended) "
+                "score when both graders ran, or the single grader's score "
+                "when --grader restricts to one."
+            ),
+        ),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option(
@@ -52,13 +64,13 @@ def evaluate(
 
     try:
         if grader == Grader.DETERMINISTIC:
-            deterministic(test_cases, solutions, display_results=True)
+            deterministic(test_cases, solutions, True, fail_under)
 
         elif grader == Grader.LLM_JUDGE:
-            llm_judge(test_cases, solutions, display_results=True)
+            llm_judge(test_cases, solutions, True, fail_under)
 
         else:
-            both(test_cases, solutions, verbose)
+            both(test_cases, solutions, fail_under, verbose)
 
     except ValueError as exc:
         err_console.print(f"[bold red]Evaluation failed:[/bold red] {exc}")

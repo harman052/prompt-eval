@@ -1,3 +1,4 @@
+import typer
 from rich.console import Console
 from rich.table import Table
 
@@ -7,6 +8,7 @@ from prompt_eval.cli.constants import (
     MODEL_RESULTS_FILE,
 )
 from prompt_eval.cli.utils import (
+    err_console,
     generate_numbered_list,
     print_table,
     save_file,
@@ -195,8 +197,24 @@ def _print_combined_results(
     print_table(table)
 
 
+def calculate_average_score(scores: list[float]) -> float:
+    if not scores:
+        return 0.0
+
+    return sum(scores) / len(scores)
+
+
+def exit_with_non_zero_code(threshold: float, average: float):
+    err_console.print(f"Threshhold: {threshold}")
+    err_console.print("\n[bold red]Exit code: 1[/bold red]\n")
+    raise typer.Exit(code=1)
+
+
 def deterministic(
-    dataset: Dataset, solutions: Solutions, display_results: bool = True
+    dataset: Dataset,
+    solutions: Solutions,
+    display_results: bool = True,
+    fail_under: float | None = None,
 ) -> DeterministicGraderResults:
     solutions_by_id = _get_solutions_by_id(solutions)
     results = DeterministicGraderResults(root=[])
@@ -212,15 +230,25 @@ def deterministic(
                 score=deterministic_grader(test_case, solution),
             )
         )
+
+    average = calculate_average_score([result.score for result in results.root])
+
     if display_results:
         _print_deterministic_results(results)
+        console.print(f"Average score: {average}")
+
+    if fail_under != None and average < fail_under:
+        exit_with_non_zero_code(fail_under, average)
 
     save_file(results, DETERMINISTIC_RESULTS_FILE)
     return results
 
 
 def llm_judge(
-    dataset: Dataset, solutions: Solutions, display_results: bool = True
+    dataset: Dataset,
+    solutions: Solutions,
+    display_results: bool = True,
+    fail_under: float | None = None,
 ) -> ModelGraderResults:
     model_grader = ModelGrader(LLMClient())
     solutions_by_id = _get_solutions_by_id(solutions)
@@ -242,8 +270,14 @@ def llm_judge(
             )
         )
 
+    average = calculate_average_score([result.score for result in results.root])
+
     if display_results:
         _print_model_results(results)
+        console.print(f"Average score: {average}")
+
+    if fail_under != None and average < fail_under:
+        exit_with_non_zero_code(fail_under, average)
 
     save_file(results, MODEL_RESULTS_FILE)
     return results
@@ -252,25 +286,33 @@ def llm_judge(
 def both(
     dataset: Dataset,
     solutions: Solutions,
+    fail_under: float | None,
     verbose: bool,
 ) -> CombinedResults:
     with console.status("Getting Deterministic Scores..."):
-        deterministic_results = deterministic(dataset, solutions, display_results=False)
+        deterministic_results = deterministic(dataset, solutions, False)
 
     console.print("✓ Getting Deterministic Scores")
 
     with console.status("Getting LLM-Judge Scores..."):
-        model_results = llm_judge(dataset, solutions, display_results=False)
+        model_results = llm_judge(dataset, solutions, False)
 
     console.print("✓ Getting LLM-Judge Scores")
 
-    combined_results = _build_combined_results(
+    results = _build_combined_results(
         dataset,
         deterministic_results,
         model_results,
     )
 
-    save_file(combined_results, COMBINED_RESULTS_FILE)
-    _print_combined_results(combined_results, verbose)
+    average = calculate_average_score([result.final_score for result in results.root])
 
-    return combined_results
+    _print_combined_results(results, verbose)
+    console.print(f"Average score: {average}")
+
+    if fail_under != None and average < fail_under:
+        exit_with_non_zero_code(fail_under, average)
+
+    save_file(results, COMBINED_RESULTS_FILE)
+
+    return results
