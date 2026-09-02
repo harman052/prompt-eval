@@ -1,31 +1,29 @@
-from pathlib import Path
-import shutil
+"""``prompt-eval set-baseline`` - promote the current results to the baseline."""
 
-import typer
-from rich.console import Console
+from __future__ import annotations
 
-from prompt_eval.cli.constants import (
-    BASELINE_DIR,
-    DEFAULT_BASELINE_FILE,
-    DEFAULT_COMBINED_RESULTS_FILE,
-)
-
-console = Console()
-err_console = Console(stderr=True)
-
-app = typer.Typer()
+from prompt_eval.cli.options import handle_errors, require_file
+from prompt_eval.models import CombinedReport
+from prompt_eval.paths import COMBINED_RESULTS_FILE, DEFAULT_BASELINE_FILE
+from prompt_eval.reporting import print_success
+from prompt_eval.storage import load_model, save_model
 
 
-@app.command()
-def set_baseline():
-    """
-    Explicitly sets current results as a new baseline for comparisons
-    """
-    try:
-        destination = Path(DEFAULT_BASELINE_FILE)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(DEFAULT_COMBINED_RESULTS_FILE, DEFAULT_BASELINE_FILE)
-        console.print("\n[bold green]✓ A new baseline is set.[/bold green]\n")
-    except Exception as exc:
-        err_console.print(f"\n[bold red]Failed to set new baseline:[/bold red] {exc}\n")
-        raise typer.Exit(code=1) from exc
+@handle_errors
+def set_baseline() -> None:
+    """Set the current combined results as the new comparison baseline."""
+    require_file(
+        COMBINED_RESULTS_FILE,
+        hint="Produce results first with: [bold]prompt-eval evaluate[/bold]",
+    )
+
+    # Load-then-save rather than a file copy: it validates the artifact before
+    # it becomes the thing every future run is judged against, so a corrupt
+    # results file cannot poison the baseline.
+    report = load_model(CombinedReport, COMBINED_RESULTS_FILE)
+    save_model(report, DEFAULT_BASELINE_FILE)
+
+    print_success(
+        f"Baseline set from {len(report.results)} test case(s) "
+        f"({DEFAULT_BASELINE_FILE})"
+    )

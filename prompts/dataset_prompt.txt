@@ -1,0 +1,10 @@
+Generate exactly $test_case_count AWS-related coding test cases.
+
+Each test case must:
+* require a Python, JSON or Regex solution;
+* be solvable in a single file, without access to a larger codebase;
+* be verifiable offline, with no live AWS credentials or network calls;
+* state solution criteria that are objective enough for a reviewer to apply
+  consistently.
+
+Vary the formats and the difficulty across the set. Do not repeat a task.

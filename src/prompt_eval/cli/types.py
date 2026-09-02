@@ -1,7 +1,9 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class Grader(str, Enum):
+class GraderChoice(StrEnum):
+    """Which grader(s) ``evaluate`` should run."""
+
     DETERMINISTIC = "deterministic"
     LLM_JUDGE = "llm-judge"
     BOTH = "both"

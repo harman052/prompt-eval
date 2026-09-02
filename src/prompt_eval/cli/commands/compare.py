@@ -1,132 +1,96 @@
+"""``prompt-eval compare`` - diff the current results against the baseline."""
+
+from __future__ import annotations
+
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Annotated
 
 import typer
-from rich.console import Console
-from rich.table import Table
 
-from prompt_eval.cli.constants import (
+from prompt_eval.cli.options import handle_errors, require_file
+from prompt_eval.constants import EXIT_GATE_FAILED
+from prompt_eval.models import CombinedReport
+from prompt_eval.paths import (
+    COMBINED_RESULTS_FILE,
     COMPARISON_RESULTS_DIR,
     DEFAULT_BASELINE_FILE,
-    DEFAULT_COMBINED_RESULTS_FILE,
 )
-from prompt_eval.cli.utils import (
-    calcuate_delta,
-    format_delta,
-    get_prompt_metadata,
-    load_file,
-    print_table,
-    save_file,
+from prompt_eval.pipeline import (
+    average_score,
+    compare_to_baseline,
+    count_regressions,
+    unmatched_test_case_ids,
 )
-from prompt_eval.models import CombinedResults, ComparisonResult, ComparisonResults
+from prompt_eval.reporting import (
+    err_console,
+    print_average,
+    print_comparison_report,
+    print_regression_summary,
+    print_success,
+)
+from prompt_eval.storage import load_model, save_model
 
-console = Console()
-err_console = Console(stderr=True)
-
-app = typer.Typer()
-
-
-def count_regressions(results: ComparisonResults, threshold: float):
-    count: list[ComparisonResult] = [r for r in results.results if r.delta < -threshold]
-    return len(count)
-
-
-def display_regression_summary(regression_count: int, threshold: float):
-    message = "[bold green]✓ No regressions found.[/bold green]\n"
-    if regression_count > 0:
-        message = f"[bold red]{regression_count} {'regression' if regression_count >= 1 else 'regressions'} detected[/bold red] (threshold: {threshold:.2f})\n"
-        err_console.print(message)
-    else:
-        console.print(message)
-
-
-def print_comparison_results(results: ComparisonResults) -> None:
-
-    table = Table(
-        "Test Case ID",
-        "Test Case",
-        "Baseline",
-        "Current",
-        "Delta",
-        title="Baseline Comparison",
-        width=100,
-    )
-
-    for result in results.results:
-        table.add_row(
-            result.test_case_id,
-            result.task,
-            str(result.baseline_score),
-            str(result.current_score),
-            str(format_delta(result.delta)),
-        )
-
-    print_table(table)
-
-
-def persist_comparison_results(results: ComparisonResults):
-    try:
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
-        file_name = Path(f"{timestamp}.json")
-        path = Path(COMPARISON_RESULTS_DIR / file_name)
-        save_file(results, path)
-        console.print(f"[bold]Comparison written to {path}[bold]\n")
-    except (OSError, ValueError) as exc:
-        err_console.print(
-            f"[bold red]failed to save comparison results[bold red]: {exc}"
-        )
-
-
-@app.command()
-def compare(
-    regression_threshold: Annotated[
-        float | None,
-        typer.Option(
-            help=(
-                "Exit with a non-zero status if any test case's score drops by "
-                "more than this amount compared to the baseline. If unset, "
-                "regressions are still reported but never cause a non-zero exit."
-            ),
+RegressionThresholdOption = Annotated[
+    float | None,
+    typer.Option(
+        "--regression-threshold",
+        min=0.0,
+        help=(
+            "Exit non-zero if any test case's score drops by more than this "
+            "amount versus the baseline. If unset, regressions are reported "
+            "but never fail the run."
         ),
-    ] = None,
-):
-    """
-    Diffs baseline vs. current
-    """
-    results: ComparisonResults = ComparisonResults(
-        metadata=get_prompt_metadata(),
-        results=[],
+    ),
+]
+
+
+@handle_errors
+def compare(regression_threshold: RegressionThresholdOption = None) -> None:
+    """Diff baseline scores against the current run."""
+    require_file(
+        DEFAULT_BASELINE_FILE,
+        hint="Create one with: [bold]prompt-eval set-baseline[/bold]",
     )
-    try:
-        baseline = load_file(CombinedResults, DEFAULT_BASELINE_FILE)
-        current = load_file(CombinedResults, DEFAULT_COMBINED_RESULTS_FILE)
+    require_file(
+        COMBINED_RESULTS_FILE,
+        hint="Produce results first with: [bold]prompt-eval evaluate[/bold]",
+    )
 
-        for baseline_results, current_results in zip(
-            baseline.results, current.results, strict=True
-        ):
-            results.results.append(
-                ComparisonResult(
-                    test_case_id=current_results.test_case_id,
-                    task=baseline_results.task,
-                    baseline_score=baseline_results.final_score,
-                    current_score=current_results.final_score,
-                    delta=calcuate_delta(
-                        baseline_results.final_score, current_results.final_score
-                    ),
-                )
-            )
+    baseline = load_model(CombinedReport, DEFAULT_BASELINE_FILE)
+    current = load_model(CombinedReport, COMBINED_RESULTS_FILE)
 
-        print_comparison_results(results)
+    report = compare_to_baseline(baseline, current)
+    _warn_about_unmatched(baseline, current)
 
-        if regression_threshold:
-            regression_count = count_regressions(results, regression_threshold)
-            display_regression_summary(regression_count, regression_threshold)
-            if regression_count > 0:
-                raise typer.Exit(code=1)
+    print_comparison_report(report)
+    print_average("Average delta", average_score(r.delta for r in report.results))
 
-        persist_comparison_results(results)
+    # Persist before the gate: a run that fails CI is exactly the run whose
+    # artifact we want to inspect afterwards.
+    path = save_model(report, COMPARISON_RESULTS_DIR / _timestamped_filename())
+    print_success(f"Comparison written to {path}")
 
-    except (OSError, ValueError) as exc:
-        err_console.print(f"[bold red]Comparison failed:[/bold red] {exc}")
-        raise typer.Exit(code=1) from exc
+    if regression_threshold is None:
+        return
+
+    regressions = count_regressions(report, regression_threshold)
+    print_regression_summary(regressions, regression_threshold)
+    if regressions:
+        raise typer.Exit(code=EXIT_GATE_FAILED)
+
+
+def _warn_about_unmatched(baseline: CombinedReport, current: CombinedReport) -> None:
+    """Report test cases present on only one side of the comparison."""
+    dropped, added = unmatched_test_case_ids(baseline, current)
+    if dropped:
+        err_console.print(
+            f"[yellow]⚠ Not in the current run (skipped): {', '.join(dropped)}[/yellow]"
+        )
+    if added:
+        err_console.print(
+            f"[yellow]⚠ Not in the baseline (skipped): {', '.join(added)}[/yellow]"
+        )
+
+
+def _timestamped_filename() -> str:
+    return f"{datetime.now(UTC).strftime('%Y%m%d_%H%M%S_%f')}.json"

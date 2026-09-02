@@ -1,41 +1,40 @@
-from pathlib import Path
-from typing import Annotated
+"""``prompt-eval generate`` - produce one solution per test case."""
 
-import typer
-from rich.console import Console
+from __future__ import annotations
 
-from prompt_eval.cli.constants import (
-    DEFAULT_DATASET_FILE,
-    DEFAULT_OUTPUTS_FILE,
+from prompt_eval.cli.options import (
+    DatasetOption,
+    handle_errors,
+    require_file,
+    run_async,
+    status,
 )
-from prompt_eval.cli.prompt import generate_prompt_output
-from prompt_eval.cli.utils import load_file, print_dataset_error
-
-# from prompt_eval.dataset import load_dataset
-from prompt_eval.models import Dataset
-
-console = Console()
-err_console = Console(stderr=True)
-
-app = typer.Typer()
+from prompt_eval.llm import LLMClient
+from prompt_eval.models import Dataset, SolutionReport
+from prompt_eval.paths import DEFAULT_DATASET_FILE, DEFAULT_SOLUTIONS_FILE
+from prompt_eval.pipeline import generate_solutions
+from prompt_eval.reporting import print_success
+from prompt_eval.storage import load_model, save_model
 
 
-@app.command()
-def generate(
-    dataset: Annotated[
-        Path, typer.Option(help="Path where the test dataset is loaded from.")
-    ] = Path(DEFAULT_DATASET_FILE),
-):
-    """
-    Generate solution per test case using a LLM
-    """
-    if not dataset.is_file():
-        print_dataset_error(dataset)
-        raise typer.Exit(code=2)
+@handle_errors
+def generate(dataset: DatasetOption = DEFAULT_DATASET_FILE) -> None:
+    """Generate a solution per test case using the LLM."""
+    require_file(
+        dataset,
+        hint="Create one with: [bold]prompt-eval init-dataset[/bold]",
+    )
+    test_cases = load_model(Dataset, dataset)
 
-    with console.status("Generating solutions to test cases..."):
-        test_cases = load_file(Dataset, dataset)
-        generate_prompt_output(test_cases)
-        console.print(
-            f"\n[green bold]✓ Solution per test case are saved in {DEFAULT_OUTPUTS_FILE}.[/green bold]\n"
-        )
+    with status(f"Generating solutions for {len(test_cases)} test case(s)"):
+        report = run_async(_generate(test_cases))
+
+    save_model(report, DEFAULT_SOLUTIONS_FILE)
+    print_success(
+        f"{len(report.results)} solution(s) written to {DEFAULT_SOLUTIONS_FILE}"
+    )
+
+
+async def _generate(test_cases: Dataset) -> SolutionReport:
+    async with LLMClient() as llm:
+        return await generate_solutions(llm, test_cases)

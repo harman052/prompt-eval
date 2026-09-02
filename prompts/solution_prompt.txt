@@ -1,7 +1,10 @@
-Complete the following task:
+Complete the following task.
 
-Task:
-{task}
+<task>
+$task
+</task>
 
-* The entire response must be valid {format} source.
-* Do not add any comments or commentary or explanation
+Requirements:
+* The `code` field must contain valid $format source and nothing else.
+* Do not wrap it in markdown fences.
+* Do not include comments, commentary or explanation.

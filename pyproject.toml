@@ -8,20 +8,78 @@ dependencies = [
     "anthropic>=0.121.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
+    "rich>=15.0.0",
     "typer>=0.27.1",
 ]
+
+[project.scripts]
+prompt-eval = "prompt_eval.cli.app:app"
 
 [dependency-groups]
 dev = [
     "mypy>=2.3.1",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.0.0",
     "ruff>=0.16.4",
 ]
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.10.0"]
+build-backend = "uv_build"
 
 [tool.uv]
 package = true
 
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "C4",   # comprehensions
+    "RET",  # flake8-return
+    "PTH",  # prefer pathlib
+    "ARG",  # unused arguments
+    "TID",  # tidy imports
+    "ASYNC",# flake8-async
+    "RUF",
+]
+ignore = ["E501"]  # long lines are reported by the formatter, not the linter
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]  # pytest fixtures are injected but often unused by name
+
+[tool.mypy]
+python_version = "3.13"
+files = ["src", "tests"]
+strict = true
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_decorators = false
+
 [tool.pyright]
 typeCheckingMode = "standard"
 
-[project.scripts]
-prompt-eval = "prompt_eval.cli.app:app"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+# The suite is function-based; disabling class collection stops pytest from
+# trying to collect imported models such as `TestCase` / `TestCaseSpec`.
+python_classes = []
+addopts = "-q --strict-markers --strict-config"
+filterwarnings = ["error"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]

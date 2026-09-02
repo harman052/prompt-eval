@@ -1,57 +1,49 @@
-from typing import Annotated
+"""``prompt-eval init-dataset`` - create a test dataset with the LLM."""
+
+from __future__ import annotations
 
 import typer
-from rich.console import Console
 
-from prompt_eval.cli.constants import (
-    DEFAULT_DATASET_FILE,
-    DEFAULT_TEST_CASES,
-    MIN_TEST_CASES,
+from prompt_eval.cli.options import (
+    NumCasesOption,
+    handle_errors,
+    run_async,
+    status,
 )
-from prompt_eval.dataset import generate_dataset
+from prompt_eval.constants import DEFAULT_TEST_CASES, EXIT_USAGE
+from prompt_eval.llm import LLMClient
+from prompt_eval.models import Dataset
+from prompt_eval.paths import DEFAULT_DATASET_FILE
+from prompt_eval.pipeline import generate_dataset
+from prompt_eval.reporting import err_console, print_success
+from prompt_eval.storage import save_model
 
-console = Console()
-err_console = Console(stderr=True)
 
-app = typer.Typer()
-
-
-@app.command()
+@handle_errors
 def init_dataset(
-    regenerate: Annotated[
-        bool,
-        typer.Option(
-            "--regenerate",
-            help="Forces dataset regeneration even if data/dataset.json already exists. Use --num-cases to specify the number of test cases to generate.",
-        ),
-    ] = False,
-    num_cases: Annotated[
-        int,
-        typer.Option(
-            "--num-cases",
-            help=f"Number of test cases to generate. Use it with --regenerate flag. Minimum value: {MIN_TEST_CASES}",
-            min=MIN_TEST_CASES,
-        ),
-    ] = DEFAULT_TEST_CASES,
-):
-    """
-    Creates a test dataset at data/dataset.json via the LLM
-    """
-    if (
-        regenerate == False
-        and DEFAULT_DATASET_FILE.exists()
-        and DEFAULT_DATASET_FILE.is_file()
-    ):
+    num_cases: NumCasesOption = DEFAULT_TEST_CASES,
+    regenerate: bool = typer.Option(
+        False,
+        "--regenerate",
+        help="Overwrite an existing dataset.",
+    ),
+) -> None:
+    """Create a test dataset at data/dataset.json via the LLM."""
+    if DEFAULT_DATASET_FILE.is_file() and not regenerate:
         err_console.print(
-            "\n[red bold]⚠︎ Dataset already exists at data/dataset.json. Use [code]--regenerate[/code] flag to override exisiting dataset.[/red bold]\n"
+            f"[bold yellow]⚠ A dataset already exists at {DEFAULT_DATASET_FILE}."
+            "[/bold yellow]\nPass [bold]--regenerate[/bold] to overwrite it."
         )
-        raise typer.Exit(code=2)
-    else:
-        with console.status(
-            f"Generating new dataset with {num_cases} test {'cases' if num_cases > 1 else 'case'}..."
-        ):
-            generate_dataset(num_cases)
+        raise typer.Exit(code=EXIT_USAGE)
 
-            console.print(
-                f"\n[green bold]✓ Dataset generated with {num_cases} test {'cases' if num_cases > 1 else 'case'} at data/dataset.json.[/green bold]\n"
-            )
+    noun = "case" if num_cases == 1 else "cases"
+    with status(f"Generating a dataset with {num_cases} test {noun}"):
+        dataset = run_async(_generate(num_cases))
+
+    save_model(dataset, DEFAULT_DATASET_FILE)
+    print_success(f"{len(dataset)} test {noun} written to {DEFAULT_DATASET_FILE}")
+
+
+async def _generate(num_cases: int) -> Dataset:
+    async with LLMClient() as llm:
+        return await generate_dataset(llm, num_cases)

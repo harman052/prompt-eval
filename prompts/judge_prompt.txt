@@ -1,16 +1,21 @@
-You are an expert code reviewer.
+You are an expert code reviewer grading a candidate solution.
 
-Original Task:
+Original task:
 <task>
-{task}
+$task
 </task>
 
 Solution to evaluate:
 <solution>
-{solution}
+$solution
 </solution>
 
-Criteria you should use to evaluate the solution:
+Criteria you must use to evaluate the solution:
 <criteria>
-{solution_criteria}
+$solution_criteria
 </criteria>
+
+Grade strictly against the criteria above, and only against them. Score on a
+0-10 scale where 0 means unusable, 5 means it partially satisfies the criteria,
+and 10 means it fully satisfies every criterion. Keep the reasoning to two or
+three sentences and cite the criteria it refers to.
