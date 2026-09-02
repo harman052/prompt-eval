@@ -2,41 +2,100 @@ name: Prompt Eval
 
 on:
   pull_request:
-    paths:
-      - "prompts/**"
-      - "data/dataset.json"
-      - "src/**"
+  push:
+    branches: [main]
   workflow_dispatch:
 
+# A newer push supersedes an in-flight run; evaluation costs API credits.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  eval:
+  # Fast, free, and required: nothing reaches the paid job until this passes.
+  quality:
+    name: Lint, types and tests
     runs-on: ubuntu-latest
-    env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
-      - name: Generate outputs
-        run: uv run prompt-eval generate --dataset data/dataset.json
+      - name: Lint
+        run: uv run ruff check src tests
 
-      - name: Evaluate
+      - name: Check formatting
+        run: uv run ruff format --check src tests
+
+      - name: Type-check
+        run: uv run mypy
+
+      - name: Test
+        run: uv run pytest --cov=prompt_eval --cov-report=term-missing
+
+  # Only runs when something that can change the scores changed.
+  eval:
+    name: Evaluate prompts
+    needs: quality
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+      MAX_CONCURRENCY: "4"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changes that affect scores
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            scored:
+              - 'prompts/**'
+              - 'data/dataset.json'
+              - 'src/**'
+
+      - name: Install uv
+        if: steps.changes.outputs.scored == 'true'
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        if: steps.changes.outputs.scored == 'true'
+        run: uv sync --locked
+
+      - name: Generate solutions
+        if: steps.changes.outputs.scored == 'true'
+        run: uv run prompt-eval generate
+
+      - name: Evaluate against the absolute quality floor
+        if: steps.changes.outputs.scored == 'true'
         run: uv run prompt-eval evaluate --fail-under 7.0
 
-      - name: Compare against baseline
+      # Runs even if the floor was breached, so the PR shows both the absolute
+      # score and the per-test-case movement rather than just the first failure.
+      - name: Compare against the baseline
+        if: always() && steps.changes.outputs.scored == 'true'
         run: uv run prompt-eval compare --regression-threshold 1.0
 
       - name: Upload results
-        if: always()
+        if: always() && steps.changes.outputs.scored == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: eval-results
           path: |
+            output/
             eval_results/
             comparison_results/
+          if-no-files-found: warn
