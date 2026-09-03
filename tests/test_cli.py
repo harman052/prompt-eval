@@ -18,11 +18,11 @@ from prompt_eval.models import (
     CombinedReport,
     Dataset,
     DatasetSpec,
-    SolutionSpec,
     ModelGrade,
     RunMetadata,
     SolutionFormat,
     SolutionReport,
+    SolutionSpec,
     TestCaseSpec,
 )
 from prompt_eval.paths import (

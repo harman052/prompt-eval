@@ -10,11 +10,11 @@ from prompt_eval.models import (
     CombinedResult,
     Dataset,
     DatasetSpec,
-    SolutionSpec,
     ModelGrade,
     RunMetadata,
     SolutionFormat,
     SolutionReport,
+    SolutionSpec,
     TestCaseSpec,
 )
 from prompt_eval.pipeline import (
